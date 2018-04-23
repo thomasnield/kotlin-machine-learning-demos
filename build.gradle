@@ -1,0 +1,63 @@
+buildscript {
+    ext.kotlin_version = '1.2.31'
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: "kotlin"
+apply plugin: 'application'
+mainClassName='org.nield.kinance'
+
+compileKotlin {
+    kotlinOptions.jvmTarget= "1.8"
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    compile 'org.xerial:sqlite-jdbc:3.+'
+	compile 'com.zaxxer:HikariCP:2.4.1'
+    compile 'io.reactivex.rxjava2:rxjava:2.+'
+    compile 'io.reactivex.rxjava2:rxkotlin:2.2.0'
+    compile 'no.tornado:tornadofx:1.+'
+    compile 'com.github.thomasnield:rxkotlinfx:2.+'
+    compile 'de.jensd:fontawesomefx:8.9'
+    compile 'org.nield:kotlin-statistics:1.1.2'
+    compile 'org.nield:rxkotlin-jdbc:0.2.4'
+    compile 'no.tornado:tornadofx-controlsfx:0.1'
+    compile 'org.apache.commons:commons-csv:1.5'
+
+    testCompile 'junit:junit:4.12'
+}
+
+jar {
+  manifest {
+    attributes(
+      'Class-Path': configurations.compile.collect { it.getName() }.join(' '),
+      'Main-Class': 'org.nield.finance.app.FinanceAppKt'
+    )
+  }
+  from configurations.compile.collect { entry -> zipTree(entry) }
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes(
+                'Class-Path': configurations.compile.collect { it.getName() }.join(' '),
+                'Main-Class': 'org.nield.kinance.Launcher'
+        )
+    }
+    baseName = project.name + '-all'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
