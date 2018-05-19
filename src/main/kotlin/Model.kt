@@ -16,7 +16,7 @@ object PredictorModel {
                 .toList().toTypedArray()
 
         val yOutputs = inputs.asSequence()
-                .map { it.fontShade.outputValue.toDouble() }
+                .map { it.fontShade.outputValue }
                 .toList().toDoubleArray()
 
         val regression = OLS(xInputs, yOutputs)
@@ -44,9 +44,9 @@ data class CategorizedInput(
         val fontShade: FontShade
 )
 
-enum class FontShade(val color: Color, val outputValue: Int){
-    DARK(Color.BLACK, -1),
-    LIGHT(Color.WHITE, 1)
+enum class FontShade(val color: Color, val outputValue: Double){
+    DARK(Color.BLACK, -1.0),
+    LIGHT(Color.WHITE, 1.0)
 }
 
 fun randomInt(lower: Int, upper: Int) = ThreadLocalRandom.current().nextInt(lower, upper + 1)
