@@ -53,6 +53,8 @@ class MainView: View() {
                             )
 
                             setOnAction {
+
+                                PredictorModel += CategorizedInput(backgroundColor.get(), FontShade.DARK)
                                 assignRandomColor()
                             }
                         }
@@ -66,6 +68,8 @@ class MainView: View() {
                             )
 
                             setOnAction {
+                                PredictorModel += CategorizedInput(backgroundColor.get(), FontShade.DARK)
+
                                 assignRandomColor()
                             }
                         }
@@ -100,7 +104,7 @@ class MainView: View() {
                             )
 
                             backgroundColor.onChange {
-                                val result = PredictorModel.forBackgroundColor(it!!)
+                                val result = PredictorModel.predict(it!!)
 
                                 text = result.toString()
                                 textFill = result.color
