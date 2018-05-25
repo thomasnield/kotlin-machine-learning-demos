@@ -8,6 +8,16 @@ object PredictorModel {
     val inputs = FXCollections.observableArrayList<CategorizedInput>()
 
     fun predict(color: Color): FontShade {
+
+        val rgb = vectorOf(
+                color.red,
+                color.green,
+                color.blue
+        )
+
+
+
+
         return FontShade.LIGHT
     }
 
