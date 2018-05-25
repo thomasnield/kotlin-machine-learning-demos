@@ -1,9 +1,10 @@
 import org.ojalgo.matrix.BasicMatrix
 import tornadofx.*
 import java.util.concurrent.ThreadLocalRandom
+import kotlin.math.exp
 
 fun main(args: Array<String>) {
-
+/*
     val nn = neuralnetwork {
         inputlayer(nodeCount = 3)
         hiddenlayer(nodeCount =  3)
@@ -12,14 +13,12 @@ fun main(args: Array<String>) {
     }
 
     with(nn) {
-        input(1.0, 2.0, 3.0)
 
         hiddenLayers.forEach {
             it.valuesMatrix.apply(::println)
         }
         nn.outputLayer.valuesMatrix.apply(::println)
-    }
-
+    }*/
 }
 
 fun neuralnetwork(op: NeuralNetworkBuilder.() -> Unit): NeuralNetwork {
@@ -34,9 +33,6 @@ class NeuralNetwork(
         outputLayerCount: Int
 ) {
 
-    fun input(vararg values: Double) {
-        values.withIndex().forEach { (i,v) -> inputLayer.nodes[i].value = v }
-    }
     val inputLayer = InputLayer(inputNodeCount)
 
     val hiddenLayers = hiddenLayerCounts.asSequence()
@@ -55,8 +51,58 @@ class NeuralNetwork(
     fun initialize() {
         hiddenLayers.forEach { it.initializeWeights() }
         outputLayer.initializeWeights()
+    }
+
+    fun calculate() {
         hiddenLayers.forEach { it.calculate() }
         outputLayer.calculate()
+    }
+
+    fun propogate() {
+
+    }
+
+    private var isInitialized = false
+
+    /**
+     * Input a set of training values for each node
+     */
+    fun trainEntry(inputValues: DoubleArray, desiredOutputs: DoubleArray) {
+        if (inputValues.size != inputLayer.count()) throw Exception("There must be ${inputLayer.count()} inputValues")
+        if (desiredOutputs.size != outputLayer.count()) throw Exception("There must be ${outputLayer.count()} inputValues")
+
+        // initialize if needed
+        if (!isInitialized) {
+            initialize()
+            isInitialized = true
+        }
+
+        // assign input values to input nodes
+        inputValues.withIndex().forEach { (i,v) -> inputLayer.nodes[i].value = v }
+
+        // calculate new hidden and output node values
+        calculate()
+
+        // propogate error backwards and adjust weights
+        propogate()
+    }
+
+    fun predictEntry(vararg inputValues: Double): DoubleArray {
+
+        if (inputValues.size != inputLayer.count()) throw Exception("There must be ${inputLayer.count()} inputValues")
+
+        // initialize if needed
+        if (!isInitialized) {
+            initialize()
+            isInitialized = true
+        }
+
+        // assign input values to input nodes
+        inputValues.withIndex().forEach { (i,v) -> inputLayer.nodes[i].value = v }
+
+        // calculate new hidden and output node values
+        calculate()
+        return outputLayer.map { it.value }.toDoubleArray()
     }
 }
 
@@ -68,6 +114,9 @@ sealed class Layer<N: Node>: Iterable<N> {
     override fun iterator() = nodes.iterator()
 }
 
+/**
+ * An `InputLayer` belongs to the first layer and accepts the input values for each `InputNode`
+ */
 class InputLayer(nodeCount: Int): Layer<InputNode>() {
 
     override val nodes = (0..(nodeCount-1)).asSequence()
@@ -75,7 +124,9 @@ class InputLayer(nodeCount: Int): Layer<InputNode>() {
             .toList()
 }
 
-
+/**
+ * A `CalculatedLayer` is used for the hidden and output layers, and is derived off weights and values off each previous layer
+ */
 class CalculatedLayer(nodeCount: Int): Layer<CalculatedNode>() {
 
     var feedingLayer: Layer<out Node> by singleAssign()
@@ -96,7 +147,7 @@ class CalculatedLayer(nodeCount: Int): Layer<CalculatedNode>() {
     }
 
     fun calculate() {
-        valuesMatrix = weightsMatrix * feedingLayer.toPrimitiveMatrix({it.value})
+        valuesMatrix = (weightsMatrix * feedingLayer.toPrimitiveMatrix({it.value})).scalarMap { sigmoid(it) }
     }
 }
 
@@ -121,7 +172,7 @@ class CalculatedNode(index: Int,
 }
 
 fun randomInitialValue() = ThreadLocalRandom.current().nextDouble(0.0,1.0)
-
+fun sigmoid(x: Number) = 1.0 / (1.0 + exp(-x.toDouble()))
 
 // BUILDERS
 class NeuralNetworkBuilder {
