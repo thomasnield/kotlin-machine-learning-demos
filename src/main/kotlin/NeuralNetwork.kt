@@ -1,3 +1,4 @@
+import org.ojalgo.function.aggregator.Aggregator
 import org.ojalgo.matrix.BasicMatrix
 import tornadofx.*
 import java.util.concurrent.ThreadLocalRandom
@@ -58,8 +59,8 @@ class NeuralNetwork(
         outputLayer.calculate()
     }
 
-    fun propogate() {
-
+    fun propogate(errors: DoubleArray) {
+        outputLayer.backpropogate(errors)
     }
 
     private var isInitialized = false
@@ -84,7 +85,12 @@ class NeuralNetwork(
         calculate()
 
         // propogate error backwards and adjust weights
-        propogate()
+        val errors = outputLayer.asSequence().map { it.value }.zip(desiredOutputs.asSequence())
+                .map { (calculated, desired) ->  calculated - desired }
+                .toList().toDoubleArray()
+
+
+        propogate(errors)
     }
 
     fun predictEntry(vararg inputValues: Double): DoubleArray {
@@ -147,7 +153,11 @@ class CalculatedLayer(nodeCount: Int): Layer<CalculatedNode>() {
     }
 
     fun calculate() {
-        valuesMatrix = (weightsMatrix * feedingLayer.toPrimitiveMatrix({it.value})).scalarMap { sigmoid(it) }
+        valuesMatrix = (weightsMatrix * feedingLayer.toPrimitiveMatrix({it.value})).scalarApply { sigmoid(it) }
+    }
+
+    fun backpropogate(errors: DoubleArray) {
+        val proportions = weightsMatrix.reduceRows(Aggregator.SUM)
     }
 }
 

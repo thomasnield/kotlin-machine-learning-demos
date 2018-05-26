@@ -125,8 +125,20 @@ fun rationalmatrix(rows: Int, cols: Int, op: (BasicMatrix.Builder<RationalMatrix
 fun <I: BasicMatrix> BasicMatrix.Builder<I>.populate(op: (Long,Long) -> Number) =
         loopAll { row, col -> set(row, col, op(row,col))  }
 
-fun BasicMatrix.scalarMap(op: (Number) -> Number) = primitivematrix(countRows().toInt(), countColumns().toInt()) {
-    populate { row, col -> op(this@scalarMap[row, col]) }
+fun <I: BasicMatrix> BasicMatrix.Builder<I>.setAll(vararg values: Number) {
+
+    var index = 0
+
+    for (r in 0..(countRows()-1)) {
+        for (c in 0..(countColumns()-1)) {
+            set(r,c,values[index++])
+        }
+    }
+}
+
+
+fun BasicMatrix.scalarApply(op: (Number) -> Number) = primitivematrix(countRows().toInt(), countColumns().toInt()) {
+    populate { row, col -> op(this@scalarApply[row, col]) }
     build()
 }
 
