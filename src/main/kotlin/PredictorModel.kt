@@ -8,23 +8,20 @@ import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.nd4j.linalg.activations.Activation
-import org.nd4j.linalg.dataset.api.DataSet
-import org.nd4j.linalg.dataset.api.iterator.DataSetIterator
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.learning.config.Sgd
 import java.util.concurrent.ThreadLocalRandom
+
+
+
 
 object PredictorModel {
 
     val inputs = FXCollections.observableArrayList<CategorizedInput>()
 
-    val selectedPredictor = SimpleObjectProperty<Predictor>(Predictor.TOMS_BRUTE_FORCE_NEURAL)
+    val selectedPredictor = SimpleObjectProperty<Predictor>(Predictor.TOMS_BRUTE_FORCE_NN)
 
-    val nn = neuralnetwork {
-        inputlayer(4)
-        hiddenlayer(4)
-        outputlayer(2)
-    }
+
 
     fun predict(color: Color) = selectedPredictor.get().predict(color)
 
@@ -44,16 +41,23 @@ object PredictorModel {
                         .let { if (it < .5) FontShade.DARK else FontShade.LIGHT }
         },
 
-        TOMS_BRUTE_FORCE_NEURAL {
+        TOMS_BRUTE_FORCE_NN {
             override fun predict(color: Color): FontShade {
+
+                val bruteForceNN = neuralnetwork {
+                    inputlayer(4)
+                    hiddenlayer(4)
+                    outputlayer(2)
+                }
+
                 val trainingEntries = inputs.asSequence()
                         .map {
                             colorAttributes(it.color) to it.fontShade.outputValue
                         }.asIterable()
 
-                nn.trainEntries(trainingEntries)
+                bruteForceNN.trainEntries(trainingEntries)
 
-                val result = nn.predictEntry(*colorAttributes(color))
+                val result = bruteForceNN.predictEntry(*colorAttributes(color))
                 println("DARK: ${result[0]} LIGHT: ${result[1]}")
 
                 return when {
@@ -63,29 +67,42 @@ object PredictorModel {
             }
         },
 
-        DL4J {
+        DL4J_NN {
             override fun predict(color: Color): FontShade {
-                val mln = NeuralNetConfiguration.Builder()
+
+                val dl4jNN = NeuralNetConfiguration.Builder()
                         .weightInit(WeightInit.XAVIER)
-                        .activation(Activation.SIGMOID)
-                        .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
+                        .activation(Activation.HARDSIGMOID)
+                        .optimizationAlgo(OptimizationAlgorithm.LINE_GRADIENT_DESCENT)
                         .updater(Sgd(.05))
                         .list(
-                                DenseLayer.Builder().nIn(4).nOut(4).build(),
-                                OutputLayer.Builder().activation(Activation.SIGMOID).nIn(4).nOut(2).build()
+                                DenseLayer.Builder().nIn(4).nOut(20).build(),
+                                //DenseLayer.Builder().nIn(20).nOut(20).build(),
+                                OutputLayer.Builder().nIn(20).nOut(2).build()
                         ).backprop(true)
                         .build()
-                        .let(::MultiLayerNetwork)
+                        .let(::MultiLayerNetwork).apply { init() }
 
-                mln.init()
+                val examples = inputs.asSequence()
+                        .map { colorAttributes(it.color) }
+                        .toList().toTypedArray()
+                        .let { Nd4j.create(it) }
 
-                val ds = inputs.asSequence().map {
-                    colorAttributes(it.color) to it.fontShade.outputValue
-                }.toList()
+                val outcomes = inputs.asSequence()
+                        .map { it.fontShade.outputValue }
+                        .toList().toTypedArray()
+                        .let { Nd4j.create(it) }
 
+                dl4jNN.fit(examples, outcomes)
 
+                val result = dl4jNN.output(Nd4j.create(colorAttributes(color))).toDoubleVector()
 
-                return FontShade.DARK
+                println(result.joinToString(",  "))
+
+                return when {
+                    result[0] > result[1] -> FontShade.DARK
+                    else -> FontShade.LIGHT
+                }
             }
         };
 
