@@ -75,6 +75,15 @@ class MainView: View() {
                         }
                     }
                 }
+
+                fieldset {
+                    field("Model") {
+                        combobox(PredictorModel.selectedPredictor) {
+
+                            PredictorModel.Predictor.values().forEach { items.add(it) }
+                        }
+                    }
+                }
             }
 
         }
