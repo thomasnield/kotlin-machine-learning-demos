@@ -123,8 +123,3 @@ class MainView: View() {
         }
     }
 }
-
-fun randomColor() = (1..3).asSequence()
-        .map { randomInt(0,255) }
-        .toList()
-        .let { Color.rgb(it[0], it[1], it[2]) }

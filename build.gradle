@@ -28,7 +28,7 @@ dependencies {
 
     compile 'no.tornado:tornadofx:1.+'
 
-    //compile 'org.deeplearning4j:deeplearning4j-core:1.0.0-beta'
+    compile 'org.deeplearning4j:deeplearning4j-core:1.0.0-beta'
     //compile 'com.github.haifengl:smile-core:1.5.1'
     //compile 'org.nd4j:nd4j:1.0.0-beta'
     compile 'org.ojalgo:ojalgo:45.1.0'

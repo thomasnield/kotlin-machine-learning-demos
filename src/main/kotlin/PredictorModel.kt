@@ -2,17 +2,16 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
 import javafx.scene.paint.Color
 import java.util.concurrent.ThreadLocalRandom
-
+import org.deeplearning4j.nn.conf.NeuralNetConfiguration
+import org.deeplearning4j.nn.weights.WeightInit
+import org.nd4j.linalg.activations.Activation
+import org.deeplearning4j.nn.api.OptimizationAlgorithm
+import org.nd4j.linalg.learning.config.Sgd
+import org.deeplearning4j.nn.conf.layers.*
 
 object PredictorModel {
 
     val inputs = FXCollections.observableArrayList<CategorizedInput>()
-    // if you want to pre-train 1000 observations, uncomment
-    /*.apply {
-
-        (1..1000).asSequence().map { randomColor() }.map { CategorizedInput(it, Predictor.FORMULAIC.predictFunction(it)) }
-                .forEach { add(it) }
-    }*/
 
     val selectedPredictor = SimpleObjectProperty<Predictor>(Predictor.TOMS_BRUTE_FORCE_NEURAL)
 
@@ -36,17 +35,11 @@ object PredictorModel {
     enum class Predictor(val predictFunction: (Color) -> FontShade) {
 
         FORMULAIC({ color ->
-            (1 - (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue)).let { if (it < .5) FontShade.DARK else FontShade.LIGHT }
+            (1 - (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue))
+                    .let { if (it < .5) FontShade.DARK else FontShade.LIGHT }
         }),
 
         TOMS_BRUTE_FORCE_NEURAL({ color ->
-
-            fun colorAttributes(c: javafx.scene.paint.Color) = kotlin.doubleArrayOf(
-                    c.brightness,
-                    c.red,
-                    c.green,
-                    c.blue
-            )
 
             val trainingEntries = inputs.asSequence()
                     .map {
@@ -62,13 +55,28 @@ object PredictorModel {
                 result[0] > result[1] -> FontShade.DARK
                 else -> FontShade.LIGHT
             }
+        }),
+
+        DL4J({ color ->
+            val conf = NeuralNetConfiguration.Builder()
+                    .weightInit(WeightInit.XAVIER)
+                    .activation(Activation.SIGMOID)
+                    .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
+                    .updater(Sgd(.05))
+                    .list(
+                        DenseLayer.Builder().nIn(4).nOut(4).build(),
+                            OutputLayer.Builder().activation(Activation.SIGMOID).nIn(4).nOut(2).build()
+                    ).backprop(true)
+                    .build()
+
+
+            FontShade.DARK
         });
 
         override fun toString() = name.replace("_", " ")
     }
 
 }
-
 
 data class CategorizedInput(
         val color: Color,
@@ -80,4 +88,19 @@ enum class FontShade(val color: Color, val outputValue: Double){
     LIGHT(Color.WHITE, 1.0)
 }
 
+// UTILITIES
+
 fun randomInt(lower: Int, upper: Int) = ThreadLocalRandom.current().nextInt(lower, upper + 1)
+
+
+fun randomColor() = (1..3).asSequence()
+        .map { randomInt(0,255) }
+        .toList()
+        .let { Color.rgb(it[0], it[1], it[2]) }
+
+fun colorAttributes(c: javafx.scene.paint.Color) = kotlin.doubleArrayOf(
+        c.brightness,
+        c.red,
+        c.green,
+        c.blue
+)
