@@ -7,6 +7,13 @@ import java.util.concurrent.ThreadLocalRandom
 object PredictorModel {
 
     val inputs = FXCollections.observableArrayList<CategorizedInput>()
+    // if you want to pre-train 1000 observations, uncomment
+    /*.apply {
+
+        (1..1000).asSequence().map { randomColor() }.map { CategorizedInput(it, Predictor.FORMULAIC.predictFunction(it)) }
+                .forEach { add(it) }
+    }*/
+
     val selectedPredictor = SimpleObjectProperty<Predictor>(Predictor.TOMS_BRUTE_FORCE_NEURAL)
 
     val nn = neuralnetwork {

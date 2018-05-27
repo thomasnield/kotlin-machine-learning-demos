@@ -20,10 +20,7 @@ class MainView: View() {
 
     val backgroundColor = SimpleObjectProperty(Color.GRAY)
 
-    fun assignRandomColor() = (1..3).asSequence()
-            .map { randomInt(0,255) }
-            .toList()
-            .let { Color.rgb(it[0], it[1], it[2]) }
+    fun assignRandomColor() = randomColor()
             .also { backgroundColor.set(it) }
 
     override val root = splitpane {
@@ -126,3 +123,8 @@ class MainView: View() {
         }
     }
 }
+
+fun randomColor() = (1..3).asSequence()
+        .map { randomInt(0,255) }
+        .toList()
+        .let { Color.rgb(it[0], it[1], it[2]) }
