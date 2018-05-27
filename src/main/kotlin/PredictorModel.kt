@@ -15,7 +15,7 @@ object PredictorModel {
 
     fun predict(color: Color): FontShade {
 
-        fun rgb(c: Color) = doubleArrayOf(
+        fun colorAttributes(c: Color) = doubleArrayOf(
                 c.brightness,
                 c.red,
                 c.green,
@@ -25,12 +25,13 @@ object PredictorModel {
 
         val trainingEntries = inputs.asSequence()
                 .map {
-                    rgb(it.color) to doubleArrayOf(it.fontShade.outputValue)
+                    colorAttributes(it.color) to doubleArrayOf(it.fontShade.outputValue)
                 }.asIterable()
 
         nn.trainEntries(trainingEntries)
 
-        val result = nn.predictEntry(*rgb(color))
+        val result = nn.predictEntry(*colorAttributes(color))
+        println("DARK: ${result[0]} LIGHT: ${result[1]}")
 
         return when {
             result[0] > result[1] -> FontShade.DARK
