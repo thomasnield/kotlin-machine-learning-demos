@@ -4,7 +4,7 @@ This is a simple neural network project that will suggest a LIGHT or DARK font f
 
 The training/predicting user interface was built with [TornadoFX](https://github.com/edvin/tornadofx).
 
-![demo.gif]
+![](demo.gif)
 
 Currently, the neural network has been implemented from scratch with some matrix calculation help from [ojAlgo](https://github.com/optimatika/ojAlgo). No backpropagation is currently implemented, and a brute-force random algorithm will find optimal weight values.
 
