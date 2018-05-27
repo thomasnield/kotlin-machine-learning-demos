@@ -2,30 +2,31 @@ import org.ojalgo.function.aggregator.Aggregator
 import org.ojalgo.matrix.BasicMatrix
 import tornadofx.*
 import java.util.concurrent.ThreadLocalRandom
+import kotlin.math.abs
 import kotlin.math.exp
 
 fun main(args: Array<String>) {
-/*
-    val nn = neuralnetwork {
-        inputlayer(nodeCount = 3)
-        hiddenlayer(nodeCount =  3)
-        outputlayer(nodeCount = 2)
 
+    val nn = neuralnetwork {
+        inputlayer(nodeCount = 1)
+        hiddenlayer(nodeCount =  2)
+        outputlayer(nodeCount = 2)
     }
 
-    with(nn) {
 
-        hiddenLayers.forEach {
-            it.valuesMatrix.apply(::println)
-        }
-        nn.outputLayer.valuesMatrix.apply(::println)
-    }*/
+    nn.trainEntries(
+            (1..1000).asSequence()
+                    .map { doubleArrayOf(it.toDouble()) to if (it % 2 == 0) doubleArrayOf(0.0, 1.0) else doubleArrayOf(1.0, 0.0) }
+                    .asIterable()
+    )
+
+    nn.predictEntry(1.0).forEach { println(it) }
 }
 
 fun neuralnetwork(op: NeuralNetworkBuilder.() -> Unit): NeuralNetwork {
     val nn = NeuralNetworkBuilder()
     nn.op()
-    return nn.build().also { it.initialize() }
+    return nn.build().also { it.randomize() }
 }
 
 class NeuralNetwork(
@@ -33,6 +34,8 @@ class NeuralNetwork(
         hiddenLayerCounts: List<Int>,
         outputLayerCount: Int
 ) {
+
+    private var isInitialized = false
 
     val inputLayer = InputLayer(inputNodeCount)
 
@@ -49,9 +52,9 @@ class NeuralNetwork(
         it.feedingLayer = (if (hiddenLayers.isNotEmpty()) hiddenLayers.last() else inputLayer)
     }
 
-    fun initialize() {
-        hiddenLayers.forEach { it.initializeWeights() }
-        outputLayer.initializeWeights()
+    fun randomize() {
+        hiddenLayers.forEach { it.randomizeWeights() }
+        outputLayer.randomizeWeights()
     }
 
     fun calculate() {
@@ -63,45 +66,56 @@ class NeuralNetwork(
         outputLayer.backpropogate(errors)
     }
 
-    private var isInitialized = false
+    val weightMatrices get() = hiddenLayers.asSequence().map { it.weightsMatrix }
+            .plusElement(outputLayer.weightsMatrix)
+            .toList()
+
+    val calculatedLayers = hiddenLayers.plusElement(outputLayer)
 
     /**
      * Input a set of training values for each node
      */
-    fun trainEntry(inputValues: DoubleArray, desiredOutputs: DoubleArray) {
-        if (inputValues.size != inputLayer.count()) throw Exception("There must be ${inputLayer.count()} inputValues")
-        if (desiredOutputs.size != outputLayer.count()) throw Exception("There must be ${outputLayer.count()} inputValues")
+    fun trainEntries(inputsAndTargets: Iterable<Pair<DoubleArray, DoubleArray>>) {
 
-        // initialize if needed
-        if (!isInitialized) {
-            initialize()
+        // randomize if needed
+/*        if (!isInitialized) {
+            randomize()
             isInitialized = true
-        }
+        }*/
 
-        // assign input values to input nodes
-        inputValues.withIndex().forEach { (i,v) -> inputLayer.nodes[i].value = v }
+        val entries = inputsAndTargets.toList()
+
+
+        var bestWeights = weightMatrices
+        var lowestError = Double.MAX_VALUE
 
         // calculate new hidden and output node values
-        calculate()
+        (0..1000).forEach {
+            randomize()
 
-        // propogate error backwards and adjust weights
-        val errors = outputLayer.asSequence().map { it.value }.zip(desiredOutputs.asSequence())
-                .map { (calculated, desired) ->  calculated - desired }
-                .toList().toDoubleArray()
+            val totalError = entries.asSequence().flatMap { (input,target) ->
 
+                inputLayer.withIndex().forEach { (i,layer) -> layer.value = input[i]  }
+                calculate()
 
-        propogate(errors)
+                outputLayer.asSequence().map { it.value }.zip(target.asSequence())
+                        .map { (calculated, desired) ->  abs(calculated - desired) }
+            }.average()
+
+            if (totalError < lowestError) {
+                println("$totalError < $lowestError")
+                lowestError = totalError
+                bestWeights = weightMatrices
+            }
+        }
+
+        bestWeights.withIndex().forEach { (i, m) ->
+            calculatedLayers[i].weightsMatrix = m
+        }
     }
 
     fun predictEntry(vararg inputValues: Double): DoubleArray {
 
-        if (inputValues.size != inputLayer.count()) throw Exception("There must be ${inputLayer.count()} inputValues")
-
-        // initialize if needed
-        if (!isInitialized) {
-            initialize()
-            isInitialized = true
-        }
 
         // assign input values to input nodes
         inputValues.withIndex().forEach { (i,v) -> inputLayer.nodes[i].value = v }
@@ -146,7 +160,7 @@ class CalculatedLayer(nodeCount: Int): Layer<CalculatedNode>() {
     var weightsMatrix: BasicMatrix = primitivematrix(0,0)
     var valuesMatrix: BasicMatrix = primitivematrix(0,0)
 
-    fun initializeWeights() {
+    fun randomizeWeights() {
         weightsMatrix = primitivematrix(count(), feedingLayer.count()) {
             populate { row,col -> randomInitialValue() }
         }
