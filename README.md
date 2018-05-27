@@ -1,6 +1,6 @@
 # Kotlin Simple Neural Network
 
-This is a simple neural network project that will suggest a LIGHT or DARK font for a given background color with an interactive UI.
+This is a simple neural network application that will suggest a LIGHT or DARK font for a given background color.
 
 The training/predicting user interface was built with [TornadoFX](https://github.com/edvin/tornadofx).
 
