@@ -1,27 +1,9 @@
-import org.ojalgo.function.aggregator.Aggregator
 import org.ojalgo.matrix.BasicMatrix
 import tornadofx.*
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.abs
 import kotlin.math.exp
 
-fun main(args: Array<String>) {
-
-    val nn = neuralnetwork {
-        inputlayer(nodeCount = 1)
-        hiddenlayer(nodeCount =  2)
-        outputlayer(nodeCount = 2)
-    }
-
-
-    nn.trainEntries(
-            (1..1000).asSequence()
-                    .map { doubleArrayOf(it.toDouble()) to if (it % 2 == 0) doubleArrayOf(0.0, 1.0) else doubleArrayOf(1.0, 0.0) }
-                    .asIterable()
-    )
-
-    nn.predictEntry(1.0).forEach { println(it) }
-}
 
 fun neuralnetwork(op: NeuralNetworkBuilder.() -> Unit): NeuralNetwork {
     val nn = NeuralNetworkBuilder()
@@ -35,7 +17,6 @@ class NeuralNetwork(
         outputLayerCount: Int
 ) {
 
-    private var isInitialized = false
 
     val inputLayer = InputLayer(inputNodeCount)
 
@@ -61,10 +42,10 @@ class NeuralNetwork(
         hiddenLayers.forEach { it.calculate() }
         outputLayer.calculate()
     }
-
+/*
     fun propogate(errors: DoubleArray) {
         outputLayer.backpropogate(errors)
-    }
+    }*/
 
     val weightMatrices get() = hiddenLayers.asSequence().map { it.weightsMatrix }
             .plusElement(outputLayer.weightsMatrix)
@@ -72,37 +53,35 @@ class NeuralNetwork(
 
     val calculatedLayers = hiddenLayers.plusElement(outputLayer)
 
+
     /**
      * Input a set of training values for each node
      */
     fun trainEntries(inputsAndTargets: Iterable<Pair<DoubleArray, DoubleArray>>) {
 
         // randomize if needed
-/*        if (!isInitialized) {
-            randomize()
-            isInitialized = true
-        }*/
-
         val entries = inputsAndTargets.toList()
 
-
+        var lowestError = Int.MAX_VALUE
         var bestWeights = weightMatrices
-        var lowestError = Double.MAX_VALUE
 
         // calculate new hidden and output node values
-        (0..1000).forEach {
+        (0..10000).forEach {
             randomize()
 
-            val totalError = entries.asSequence().flatMap { (input,target) ->
+            val totalError = entries.asSequence().map { (input,target) ->
 
                 inputLayer.withIndex().forEach { (i,layer) -> layer.value = input[i]  }
                 calculate()
 
-                outputLayer.asSequence().map { it.value }.zip(target.asSequence())
-                        .map { (calculated, desired) ->  abs(calculated - desired) }
-            }.average()
 
-            if (totalError < lowestError) {
+                outputLayer.asSequence().map { it.value }.zip(target.asSequence())
+                        .filter { (calculated, desired) ->
+                            abs(calculated - desired) >= .5
+                        }.count()
+            }.sum()
+
+            if (totalError in 1..(lowestError - 1)) {
                 println("$totalError < $lowestError")
                 lowestError = totalError
                 bestWeights = weightMatrices
@@ -169,10 +148,10 @@ class CalculatedLayer(nodeCount: Int): Layer<CalculatedNode>() {
     fun calculate() {
         valuesMatrix = (weightsMatrix * feedingLayer.toPrimitiveMatrix({it.value})).scalarApply { sigmoid(it) }
     }
-
+/*
     fun backpropogate(errors: DoubleArray) {
         val proportions = weightsMatrix.reduceRows(Aggregator.SUM)
-    }
+    }*/
 }
 
 
@@ -195,7 +174,7 @@ class CalculatedNode(index: Int,
 
 }
 
-fun randomInitialValue() = ThreadLocalRandom.current().nextDouble(0.0,1.0)
+fun randomInitialValue() = ThreadLocalRandom.current().nextDouble(-1.0,1.0)
 fun sigmoid(x: Number) = 1.0 / (1.0 + exp(-x.toDouble()))
 
 // BUILDERS

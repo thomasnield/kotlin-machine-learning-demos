@@ -7,18 +7,35 @@ object PredictorModel {
 
     val inputs = FXCollections.observableArrayList<CategorizedInput>()
 
+    val nn = neuralnetwork {
+        inputlayer(4)
+        hiddenlayer(4)
+        outputlayer(2)
+    }
+
     fun predict(color: Color): FontShade {
 
-        val rgb = vectorOf(
-                color.red,
-                color.green,
-                color.blue
+        fun rgb(c: Color) = doubleArrayOf(
+                c.brightness,
+                c.red,
+                c.green,
+                c.blue
         )
 
 
+        val trainingEntries = inputs.asSequence()
+                .map {
+                    rgb(it.color) to doubleArrayOf(it.fontShade.outputValue)
+                }.asIterable()
 
+        nn.trainEntries(trainingEntries)
 
-        return FontShade.LIGHT
+        val result = nn.predictEntry(*rgb(color))
+
+        return when {
+            result[0] > result[1] -> FontShade.DARK
+            else -> FontShade.LIGHT
+        }
     }
 
 
