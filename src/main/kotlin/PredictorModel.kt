@@ -1,13 +1,18 @@
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
 import javafx.scene.paint.Color
-import java.util.concurrent.ThreadLocalRandom
+import org.deeplearning4j.nn.api.OptimizationAlgorithm
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration
+import org.deeplearning4j.nn.conf.layers.DenseLayer
+import org.deeplearning4j.nn.conf.layers.OutputLayer
+import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.nd4j.linalg.activations.Activation
-import org.deeplearning4j.nn.api.OptimizationAlgorithm
+import org.nd4j.linalg.dataset.api.DataSet
+import org.nd4j.linalg.dataset.api.iterator.DataSetIterator
+import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.learning.config.Sgd
-import org.deeplearning4j.nn.conf.layers.*
+import java.util.concurrent.ThreadLocalRandom
 
 object PredictorModel {
 
@@ -43,13 +48,13 @@ object PredictorModel {
             override fun predict(color: Color): FontShade {
                 val trainingEntries = inputs.asSequence()
                         .map {
-                            colorAttributes(it.color) to kotlin.doubleArrayOf(it.fontShade.outputValue)
+                            colorAttributes(it.color) to it.fontShade.outputValue
                         }.asIterable()
 
                 nn.trainEntries(trainingEntries)
 
                 val result = nn.predictEntry(*colorAttributes(color))
-                kotlin.io.println("DARK: ${result[0]} LIGHT: ${result[1]}")
+                println("DARK: ${result[0]} LIGHT: ${result[1]}")
 
                 return when {
                     result[0] > result[1] -> FontShade.DARK
@@ -60,7 +65,7 @@ object PredictorModel {
 
         DL4J {
             override fun predict(color: Color): FontShade {
-                val conf = NeuralNetConfiguration.Builder()
+                val mln = NeuralNetConfiguration.Builder()
                         .weightInit(WeightInit.XAVIER)
                         .activation(Activation.SIGMOID)
                         .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
@@ -70,6 +75,15 @@ object PredictorModel {
                                 OutputLayer.Builder().activation(Activation.SIGMOID).nIn(4).nOut(2).build()
                         ).backprop(true)
                         .build()
+                        .let(::MultiLayerNetwork)
+
+                mln.init()
+
+                val ds = inputs.asSequence().map {
+                    colorAttributes(it.color) to it.fontShade.outputValue
+                }.toList()
+
+
 
                 return FontShade.DARK
             }
@@ -86,9 +100,9 @@ data class CategorizedInput(
         val fontShade: FontShade
 )
 
-enum class FontShade(val color: Color, val outputValue: Double){
-    DARK(Color.BLACK, 0.0),
-    LIGHT(Color.WHITE, 1.0)
+enum class FontShade(val color: Color, val outputValue: DoubleArray){
+    DARK(Color.BLACK, doubleArrayOf(0.0, 1.0)),
+    LIGHT(Color.WHITE, doubleArrayOf(1.0,0.0))
 }
 
 // UTILITIES
@@ -101,7 +115,7 @@ fun randomColor() = (1..3).asSequence()
         .toList()
         .let { Color.rgb(it[0], it[1], it[2]) }
 
-fun colorAttributes(c: javafx.scene.paint.Color) = kotlin.doubleArrayOf(
+fun colorAttributes(c: javafx.scene.paint.Color) = doubleArrayOf(
         c.brightness,
         c.red,
         c.green,

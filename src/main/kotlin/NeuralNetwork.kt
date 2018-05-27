@@ -77,11 +77,12 @@ class NeuralNetwork(
 
                 outputLayer.asSequence().map { it.value }.zip(target.asSequence())
                         .filter { (calculated, desired) ->
-                            abs(calculated - desired) >= .5
+                            desired == 1.0 && abs(calculated - desired) < .5 ||
+                                    desired == 0.0 && abs(calculated - desired) >= .5
                         }.count()
             }.sum()
 
-            if (totalError in 1..(lowestError - 1)) {
+            if (entries.count() > 1 && totalError < lowestError) {
                 println("$totalError < $lowestError")
                 lowestError = totalError
                 bestWeights = weightMatrices
