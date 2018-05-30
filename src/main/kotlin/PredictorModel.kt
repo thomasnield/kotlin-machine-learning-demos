@@ -10,6 +10,7 @@ import org.deeplearning4j.nn.weights.WeightInit
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.learning.config.Sgd
+import org.nd4j.linalg.lossfunctions.LossFunctions
 import java.util.concurrent.ThreadLocalRandom
 
 
@@ -71,17 +72,22 @@ object PredictorModel {
             override fun predict(color: Color): FontShade {
 
                 val dl4jNN = NeuralNetConfiguration.Builder()
-                        .weightInit(WeightInit.XAVIER)
-                        .activation(Activation.HARDSIGMOID)
-                        .optimizationAlgo(OptimizationAlgorithm.LINE_GRADIENT_DESCENT)
+                        .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                         .updater(Sgd(.05))
+                        .miniBatch(false)
                         .list(
-                                DenseLayer.Builder().nIn(4).nOut(20).build(),
+                                DenseLayer.Builder().nIn(4).nOut(4).build(),
                                 //DenseLayer.Builder().nIn(20).nOut(20).build(),
-                                OutputLayer.Builder().nIn(20).nOut(2).build()
+                                OutputLayer.Builder().nIn(4).nOut(2)
+                                        .activation(Activation.SOFTMAX)
+                                        .lossFunction(LossFunctions.LossFunction.MCXENT)
+                                        .build()
                         ).backprop(true)
                         .build()
-                        .let(::MultiLayerNetwork).apply { init() }
+                        .let(::MultiLayerNetwork).apply {
+                            iterationCount = 10000
+                            init()
+                        }
 
                 val examples = inputs.asSequence()
                         .map { colorAttributes(it.color) }
@@ -132,7 +138,7 @@ fun randomColor() = (1..3).asSequence()
         .toList()
         .let { Color.rgb(it[0], it[1], it[2]) }
 
-fun colorAttributes(c: javafx.scene.paint.Color) = doubleArrayOf(
+fun colorAttributes(c: Color) = doubleArrayOf(
         c.brightness,
         c.red,
         c.green,
