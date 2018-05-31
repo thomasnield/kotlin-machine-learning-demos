@@ -143,6 +143,21 @@ fun BasicMatrix.scalarApply(op: (Number) -> Number) = primitivematrix(countRows(
 }
 
 
+fun <I: BasicMatrix> BasicMatrix.Builder<I>.setAll(vararg values: Number) { 
+    var index = 0 
+    for (r in 0..(countRows()-1)) { 
+        for (c in 0..(countColumns()-1)) { 
+            set(r,c,values[index++]) 
+        } 
+    } 
+} 
+
+fun BasicMatrix.scalarApply(op: (Number) -> Number) = primitivematrix(countRows().toInt(), countColumns().toInt()) {
+    populate { row, col -> op(this@scalarApply[row, col]) } 
+    build() 
+} 
+
+
 operator fun <T> Operation.Addition<T>.plus(t: T) = add(t)
 operator fun <T> Operation.Division<T>.div(t: T) = divide(t)
 operator fun <T> Operation.Multiplication<T>.times(t: T) = multiply(t)
