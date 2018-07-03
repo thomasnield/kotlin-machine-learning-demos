@@ -42,10 +42,6 @@ class NeuralNetwork(
         hiddenLayers.forEach { it.calculate() }
         outputLayer.calculate()
     }
-/*
-    fun propogate(errors: DoubleArray) {
-        outputLayer.backpropogate(errors)
-    }*/
 
     val weightMatrices get() = hiddenLayers.asSequence().map { it.weightsMatrix }
             .plusElement(outputLayer.weightsMatrix)
@@ -149,10 +145,6 @@ class CalculatedLayer(nodeCount: Int): Layer<CalculatedNode>() {
     fun calculate() {
         valuesMatrix = (weightsMatrix * feedingLayer.toPrimitiveMatrix({it.value})).scalarApply { sigmoid(it) }
     }
-/*
-    fun backpropogate(errors: DoubleArray) {
-        val proportions = weightsMatrix.reduceRows(Aggregator.SUM)
-    }*/
 }
 
 
