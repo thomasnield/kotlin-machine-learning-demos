@@ -4,29 +4,7 @@ import org.ojalgo.matrix.BasicMatrix
 import org.ojalgo.matrix.ComplexMatrix
 import org.ojalgo.matrix.PrimitiveMatrix
 import org.ojalgo.matrix.RationalMatrix
-import java.awt.Color
 import java.math.BigDecimal
-
-    fun main(args: Array<String>) {
-
-        val colors = sequenceOf(
-                Color.RED,
-                Color.PINK,
-                Color.YELLOW,
-                Color.BLUE,
-                Color.GREEN
-        )
-
-        val matrix = colors.toPrimitiveMatrix(
-                { it.red },
-                { it.green },
-                { it.blue }
-        )
-
-        println(matrix)
-    }
-
-
 
 fun <T, N: Number> Sequence<T>.toPrimitiveMatrix(vararg selectors: (T) -> N): PrimitiveMatrix {
     val items = toList()
