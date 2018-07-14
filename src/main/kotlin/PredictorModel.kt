@@ -6,7 +6,6 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.layers.DenseLayer
 import org.deeplearning4j.nn.conf.layers.OutputLayer
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
-import org.deeplearning4j.nn.weights.WeightInit
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.learning.config.Sgd
@@ -20,18 +19,26 @@ object PredictorModel {
 
     val inputs = FXCollections.observableArrayList<CategorizedInput>()
 
-    val selectedPredictor = SimpleObjectProperty<Predictor>(Predictor.TOMS_BRUTE_FORCE_NN)
-
-
+    val selectedPredictor = SimpleObjectProperty<Predictor>(Predictor.TOMS_FEED_FORWARD_NN)
 
     fun predict(color: Color) = selectedPredictor.get().predict(color)
-
 
     operator fun plusAssign(categorizedInput: CategorizedInput)  {
         inputs += categorizedInput
     }
     operator fun plusAssign(categorizedInput: Pair<Color,FontShade>)  {
         inputs += categorizedInput.let { CategorizedInput(it.first, it.second) }
+    }
+
+    fun autoTrain() {
+
+        PredictorModel::class.java.getResource("color_training_set.csv").readText().lines()
+                .map { it.split(",").map { it.toInt() } }
+                .map { Color.rgb(it[0], it[1], it[2]) }
+                .map { CategorizedInput(it, Predictor.FORMULAIC.predict(it))  }
+                .forEach {
+                    inputs += it
+                }
     }
 
 
@@ -42,7 +49,7 @@ object PredictorModel {
                         .let { if (it < .5) FontShade.DARK else FontShade.LIGHT }
         },
 
-        TOMS_BRUTE_FORCE_NN {
+        TOMS_FEED_FORWARD_NN {
             override fun predict(color: Color): FontShade {
 
                 val bruteForceNN = neuralnetwork {
@@ -73,14 +80,14 @@ object PredictorModel {
 
                 val dl4jNN = NeuralNetConfiguration.Builder()
                         .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
-                        .updater(Sgd(.05))
+                        .updater(Sgd(.001))
                         .miniBatch(false)
                         .list(
                                 DenseLayer.Builder().nIn(4).nOut(4).build(),
-                                //DenseLayer.Builder().nIn(20).nOut(20).build(),
+                                DenseLayer.Builder().nIn(4).nOut(4).build(),
                                 OutputLayer.Builder().nIn(4).nOut(2)
-                                        .activation(Activation.SOFTMAX)
-                                        .lossFunction(LossFunctions.LossFunction.MCXENT)
+                                        .activation(Activation.SIGMOID)
+                                        .lossFunction(LossFunctions.LossFunction.MEAN_ABSOLUTE_ERROR)
                                         .build()
                         ).backprop(true)
                         .build()

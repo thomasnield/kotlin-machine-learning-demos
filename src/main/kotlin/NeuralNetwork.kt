@@ -62,7 +62,7 @@ class NeuralNetwork(
         var bestWeights = weightMatrices
 
         // calculate new hidden and output node values
-        (0..10000).forEach {
+        (0..10000).asSequence().takeWhile { lowestError > 0 }.forEach {
             randomize()
 
             val totalError = entries.asSequence().map { (input,target) ->
@@ -74,7 +74,7 @@ class NeuralNetwork(
                 outputLayer.asSequence().map { it.value }.zip(target.asSequence())
                         .filter { (calculated, desired) ->
                             desired == 1.0 && abs(calculated - desired) < .5 ||
-                                    desired == 0.0 && abs(calculated - desired) >= .5
+                                    desired == 0.0 && abs(calculated - desired) > .5
                         }.count()
             }.sum()
 
