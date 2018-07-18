@@ -81,6 +81,18 @@ class MainView: View() {
                         }
                     }
                 }
+
+                fieldset {
+                    field("Pre-Train") {
+                        button("500 Colors") {
+                            useMaxWidth = true
+                            setOnAction {
+                                PredictorModel.preTrainData()
+                                isDisable = true
+                            }
+                        }
+                    }
+                }
             }
 
         }

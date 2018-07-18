@@ -21,7 +21,7 @@ object PredictorModel {
         inputs += categorizedInput.let { CategorizedInput(it.first, it.second) }
     }
 
-    fun autoTrain() {
+    fun preTrainData() {
 
         PredictorModel::class.java.getResource("color_training_set.csv").readText().lines()
                 .map { it.split(",").map { it.toInt() } }
