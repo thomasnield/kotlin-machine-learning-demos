@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.2.50'
+    ext.kotlin_version = '1.2.51'
 
     repositories {
         mavenCentral()
@@ -20,6 +20,7 @@ compileKotlin {
 
 repositories {
   mavenCentral()
+  maven { url 'https://jitpack.io' }
 }
 
 dependencies {
@@ -28,10 +29,8 @@ dependencies {
 
     compile 'no.tornado:tornadofx:1.+'
 
-    compile 'org.deeplearning4j:deeplearning4j-core:1.0.0-beta'
-    compile 'org.nd4j:nd4j:1.0.0-beta'
-    compile 'org.nd4j:nd4j-native-platform:1.0.0-beta'
-    compile 'org.ojalgo:ojalgo:45.1.0'
+    //compile 'org.ojalgo:ojalgo:45.1.0'
+    implementation 'com.github.optimatika:ojAlgo:develop-SNAPSHOT'
 }
 
 

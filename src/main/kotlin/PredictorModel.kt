@@ -1,18 +1,9 @@
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
 import javafx.scene.paint.Color
-import org.deeplearning4j.nn.api.OptimizationAlgorithm
-import org.deeplearning4j.nn.conf.NeuralNetConfiguration
-import org.deeplearning4j.nn.conf.layers.DenseLayer
-import org.deeplearning4j.nn.conf.layers.OutputLayer
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
-import org.nd4j.linalg.activations.Activation
-import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.learning.config.Sgd
-import org.nd4j.linalg.lossfunctions.LossFunctions
+import org.ojalgo.ann.ArtificialNeuralNetwork
+import org.ojalgo.array.Primitive64Array
 import java.util.concurrent.ThreadLocalRandom
-
-
 
 
 object PredictorModel {
@@ -75,49 +66,33 @@ object PredictorModel {
             }
         },
 
-        DL4J_NN {
+        OJALGO_NN {
+
             override fun predict(color: Color): FontShade {
+                val ann = ArtificialNeuralNetwork.builder(4, 4, 2).apply {
 
-                val dl4jNN = NeuralNetConfiguration.Builder()
-                        .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
-                        .updater(Sgd(.001))
-                        .miniBatch(false)
-                        .list(
-                                DenseLayer.Builder().nIn(4).nOut(4).build(),
-                                DenseLayer.Builder().nIn(4).nOut(4).build(),
-                                OutputLayer.Builder().nIn(4).nOut(2)
-                                        .activation(Activation.SIGMOID)
-                                        .lossFunction(LossFunctions.LossFunction.MEAN_ABSOLUTE_ERROR)
-                                        .build()
-                        ).backprop(true)
-                        .build()
-                        .let(::MultiLayerNetwork).apply {
-                            iterationCount = 10000
-                            init()
-                        }
+                    activator(0, ArtificialNeuralNetwork.Activator.IDENTITY)
+                    activator(1, ArtificialNeuralNetwork.Activator.SIGMOID)
 
-                val examples = inputs.asSequence()
-                        .map { colorAttributes(it.color) }
-                        .toList().toTypedArray()
-                        .let { Nd4j.create(it) }
+                    rate(.05)
+                    //error(ArtificialNeuralNetwork.Error.HALF_SQUARED_DIFFERENCE)
 
-                val outcomes = inputs.asSequence()
-                        .map { it.fontShade.outputValue }
-                        .toList().toTypedArray()
-                        .let { Nd4j.create(it) }
+                    val inputValues = inputs.asSequence().map { Primitive64Array.FACTORY.copy(* colorAttributes(it.color)) }
+                            .toList()
 
-                dl4jNN.fit(examples, outcomes)
+                    val outputValues = inputs.asSequence().map { Primitive64Array.FACTORY.copy(*it.fontShade.outputValue) }
+                            .toList()
 
-                val result = dl4jNN.output(Nd4j.create(colorAttributes(color))).toDoubleVector()
+                    randomise()
+                    train(inputValues, outputValues)
+                }.get()
 
-                println(result.joinToString(",  "))
-
-                return when {
-                    result[0] > result[1] -> FontShade.DARK
-                    else -> FontShade.LIGHT
+                return ann.apply(Primitive64Array.FACTORY.copy(*colorAttributes(color))).let {
+                    println("${it[0]} ${it[1]}")
+                    if (it[0] > it[1]) FontShade.LIGHT else FontShade.DARK
                 }
             }
-        };
+        } ;
 
         abstract fun predict(color: Color): FontShade
         override fun toString() = name.replace("_", " ")
