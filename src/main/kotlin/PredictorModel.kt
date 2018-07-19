@@ -10,7 +10,7 @@ object PredictorModel {
 
     val inputs = FXCollections.observableArrayList<CategorizedInput>()
 
-    val selectedPredictor = SimpleObjectProperty<Predictor>(Predictor.TOMS_FEED_FORWARD_NN)
+    val selectedPredictor = SimpleObjectProperty<Predictor>(Predictor.OJALGO_NN)
 
     fun predict(color: Color) = selectedPredictor.get().predict(color)
 

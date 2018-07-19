@@ -84,7 +84,7 @@ class MainView: View() {
 
                 fieldset {
                     field("Pre-Train") {
-                        button("500 Colors") {
+                        button("Train 1345 Colors") {
                             useMaxWidth = true
                             setOnAction {
                                 PredictorModel.preTrainData()
@@ -113,6 +113,8 @@ class MainView: View() {
                             valueProperty().onChange {
                                 backgroundColor.set(it)
                             }
+
+                            customColors.forEach { println(it) }
                         }
                     }
                     field("Result") {
