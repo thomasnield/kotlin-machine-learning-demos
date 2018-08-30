@@ -69,13 +69,13 @@ object PredictorModel {
         OJALGO_NN {
 
             override fun predict(color: Color): FontShade {
-                val ann = ArtificialNeuralNetwork.builder(4, 4, 2).apply {
+                val ann = ArtificialNeuralNetwork.builder(3, 3, 2).apply {
 
                     activator(0, ArtificialNeuralNetwork.Activator.IDENTITY)
-                    activator(1, ArtificialNeuralNetwork.Activator.SIGMOID)
+                    activator(1, ArtificialNeuralNetwork.Activator.SOFTMAX)
 
                     rate(.05)
-                    //error(ArtificialNeuralNetwork.Error.HALF_SQUARED_DIFFERENCE)
+                    error(ArtificialNeuralNetwork.Error.CROSS_ENTROPY)
 
                     val inputValues = inputs.asSequence().map { Primitive64Array.FACTORY.copy(* colorAttributes(it.color)) }
                             .toList()
@@ -87,7 +87,7 @@ object PredictorModel {
                     train(inputValues, outputValues)
                 }.get()
 
-                return ann.apply(Primitive64Array.FACTORY.copy(*colorAttributes(color))).let {
+                return ann.invoke(Primitive64Array.FACTORY.copy(*colorAttributes(color))).let {
                     println("${it[0]} ${it[1]}")
                     if (it[0] > it[1]) FontShade.LIGHT else FontShade.DARK
                 }
@@ -121,7 +121,6 @@ fun randomColor() = (1..3).asSequence()
         .let { Color.rgb(it[0], it[1], it[2]) }
 
 fun colorAttributes(c: Color) = doubleArrayOf(
-        c.brightness,
         c.red,
         c.green,
         c.blue

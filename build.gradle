@@ -12,7 +12,6 @@ buildscript {
 
 apply plugin: "kotlin"
 apply plugin: 'application'
-mainClassName='org.nield.kinance'
 
 compileKotlin {
     kotlinOptions.jvmTarget= "1.8"
@@ -33,25 +32,3 @@ dependencies {
     implementation 'com.github.optimatika:ojAlgo:develop-SNAPSHOT'
 }
 
-
-jar {
-  manifest {
-    attributes(
-      'Class-Path': configurations.compile.collect { it.getName() }.join(' '),
-      'Main-Class': 'org.nield.finance.app.FinanceAppKt'
-    )
-  }
-  from configurations.compile.collect { entry -> zipTree(entry) }
-}
-
-task fatJar(type: Jar) {
-    manifest {
-        attributes(
-                'Class-Path': configurations.compile.collect { it.getName() }.join(' '),
-                'Main-Class': 'org.nield.kinance.Launcher'
-        )
-    }
-    baseName = project.name + '-all'
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-    with jar
-}

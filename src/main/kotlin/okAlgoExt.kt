@@ -4,6 +4,8 @@ import org.ojalgo.matrix.BasicMatrix
 import org.ojalgo.matrix.ComplexMatrix
 import org.ojalgo.matrix.PrimitiveMatrix
 import org.ojalgo.matrix.RationalMatrix
+import org.ojalgo.scalar.ComplexNumber
+import org.ojalgo.scalar.RationalNumber
 import java.math.BigDecimal
 
 fun <T, N: Number> Sequence<T>.toPrimitiveMatrix(vararg selectors: (T) -> N): PrimitiveMatrix {
@@ -84,26 +86,26 @@ fun vectorOf(vararg values: BigDecimal) = rationalmatrix(values.count(), 1) {
 }
 
 
-fun primitivematrix(rows: Int, cols: Int, op: (BasicMatrix.Builder<PrimitiveMatrix>.() -> Unit)? = null) =
+fun primitivematrix(rows: Int, cols: Int, op: (BasicMatrix.PhysicalBuilder<Double,PrimitiveMatrix>.() -> Unit)? = null) =
         PrimitiveMatrix.FACTORY.getBuilder(rows,cols).also {
             if (op != null) op(it)
         }.build()
 
 
-fun complexmatrix(rows: Int, cols: Int, op: (BasicMatrix.Builder<ComplexMatrix>.() -> Unit)? = null) =
+fun complexmatrix(rows: Int, cols: Int, op: (BasicMatrix.PhysicalBuilder<ComplexNumber,ComplexMatrix>.() -> Unit)? = null) =
         ComplexMatrix.FACTORY.getBuilder(rows,cols).also {
             if (op != null) op(it)
         }.build()
 
-fun rationalmatrix(rows: Int, cols: Int, op: (BasicMatrix.Builder<RationalMatrix>.() -> Unit)? = null) =
+fun rationalmatrix(rows: Int, cols: Int, op: (BasicMatrix.PhysicalBuilder<RationalNumber,RationalMatrix>.() -> Unit)? = null) =
         RationalMatrix.FACTORY.getBuilder(rows,cols).also {
             if (op != null) op(it)
         }.build()
 
-fun <I: BasicMatrix> BasicMatrix.Builder<I>.populate(op: (Long,Long) -> Number) =
+fun <I: BasicMatrix, N: Number> BasicMatrix.PhysicalBuilder<N,I>.populate(op: (Long,Long) -> Number) =
         loopAll { row, col -> set(row, col, op(row,col))  }
 
-fun <I: BasicMatrix> BasicMatrix.Builder<I>.setAll(vararg values: Number) {
+fun <I: BasicMatrix, N: Number> BasicMatrix.PhysicalBuilder<N,I>.setAll(vararg values: Number) {
 
     var index = 0
 
