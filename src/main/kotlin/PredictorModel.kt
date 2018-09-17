@@ -127,8 +127,8 @@ object PredictorModel {
                         .let { Nd4j.create(it) }
 
 
-                // train for 1000 iterations (epochs)
-                (1..1000).forEach {
+                // train for 200 iterations (epochs)
+                (1..200).forEach {
                     dl4jNN.fit(examples, outcomes)
                 }
                 
