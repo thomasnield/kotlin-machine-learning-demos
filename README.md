@@ -18,6 +18,6 @@ For this simple toy example ojAlgo seems to perform the best, and is light and t
 
 Note also there is now a button to pre-train 1345 categorized colors. 
 
-Tariq Rashid's book [Build Your Own Neural Network](https://www.amazon.com/Make-Your-Own-Neural-Network/dp/1530826608/) is a tremendous resource, as well as [3Blue1Brown's Video](https://www.youtube.com/watch?v=aircAruvnKk&list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi). [Grokking Deep Learning](https://www.manning.com/books/grokking-deep-learning) is probably the most thorough and useful resource when you are ready to deep-dive into neural network.s 
+Tariq Rashid's book [Build Your Own Neural Network](https://www.amazon.com/Make-Your-Own-Neural-Network/dp/1530826608/) is a tremendous resource, as well as [3Blue1Brown's Video](https://www.youtube.com/watch?v=aircAruvnKk&list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi). [Grokking Deep Learning](https://www.manning.com/books/grokking-deep-learning) is probably the most thorough and useful resource when you are ready to deep-dive.
 
 
