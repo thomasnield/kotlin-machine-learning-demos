@@ -107,7 +107,8 @@ object PredictorModel {
                 val dl4jNN = NeuralNetConfiguration.Builder()
                         .weightInit(WeightInit.UNIFORM)
                         .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
-                        .updater(Sgd(.05))
+                        .updater(Nesterovs(.006, .9))
+                        .l2(1e-4)
                         .list(
                                 DenseLayer.Builder().nIn(3).nOut(3).activation(Activation.IDENTITY).build(),
                                 OutputLayer.Builder().nIn(3).nOut(2).activation(Activation.SOFTMAX).build()
@@ -127,8 +128,8 @@ object PredictorModel {
                         .let { Nd4j.create(it) }
 
 
-                // train for 200 iterations (epochs)
-                (1..200).forEach {
+                // train for 1000 iterations (epochs)
+                (1..1000).forEach {
                     dl4jNN.fit(examples, outcomes)
                 }
                 
