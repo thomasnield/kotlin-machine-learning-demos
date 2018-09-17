@@ -126,8 +126,12 @@ object PredictorModel {
                         .toList().toTypedArray()
                         .let { Nd4j.create(it) }
 
-                dl4jNN.fit(examples, outcomes)
 
+                // train for 1000 iterations (epochs)
+                (1..1000).forEach {
+                    dl4jNN.fit(examples, outcomes)
+                }
+                
                 val result = dl4jNN.output(Nd4j.create(colorAttributes(color))).toDoubleVector()
 
                 println(result.joinToString(",  "))
