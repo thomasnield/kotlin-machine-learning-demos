@@ -4,7 +4,15 @@ import javafx.scene.paint.Color
 import org.ojalgo.ann.ArtificialNeuralNetwork
 import org.ojalgo.array.Primitive64Array
 import java.util.concurrent.ThreadLocalRandom
-
+import org.deeplearning4j.nn.api.OptimizationAlgorithm
+import org.deeplearning4j.nn.conf.NeuralNetConfiguration
+import org.deeplearning4j.nn.conf.layers.DenseLayer
+import org.deeplearning4j.nn.conf.layers.OutputLayer
+import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
+import org.deeplearning4j.nn.weights.WeightInit
+import org.nd4j.linalg.activations.Activation
+import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.learning.config.Sgd
 
 object PredictorModel {
 
@@ -83,7 +91,6 @@ object PredictorModel {
                     val outputValues = inputs.asSequence().map { Primitive64Array.FACTORY.copy(*it.fontShade.outputValue) }
                             .toList()
 
-                    randomise()
                     train(inputValues, outputValues)
                 }.get()
 
@@ -92,7 +99,43 @@ object PredictorModel {
                     if (it[0] > it[1]) FontShade.LIGHT else FontShade.DARK
                 }
             }
-        } ;
+        },
+
+        DL4J_NN {
+            override fun predict(color: Color): FontShade {
+
+                val dl4jNN = NeuralNetConfiguration.Builder()
+                        .weightInit(WeightInit.UNIFORM)
+                        .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
+                        .updater(Sgd(.05))
+                        .list(
+                                DenseLayer.Builder().nIn(3).nOut(3).activation(Activation.IDENTITY).build(),
+                                OutputLayer.Builder().nIn(3).nOut(2).activation(Activation.SOFTMAX).build()
+                        ).pretrain(false)
+                        .backprop(true)
+                        .build()
+                        .let(::MultiLayerNetwork).apply { init() }
+
+                val examples = inputs.asSequence()
+                        .map { colorAttributes(it.color) }
+                        .toList().toTypedArray()
+                        .let { Nd4j.create(it) }
+
+                val outcomes = inputs.asSequence()
+                        .map { it.fontShade.outputValue }
+                        .toList().toTypedArray()
+                        .let { Nd4j.create(it) }
+
+                dl4jNN.fit(examples, outcomes)
+
+                val result = dl4jNN.output(Nd4j.create(colorAttributes(color))).toDoubleVector()
+
+                println(result.joinToString(",  "))
+
+                return if (result[0] > result[1]) FontShade.LIGHT else FontShade.DARK
+
+            }
+        };
 
         abstract fun predict(color: Color): FontShade
         override fun toString() = name.replace("_", " ")
