@@ -1,9 +1,6 @@
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
 import javafx.scene.paint.Color
-import org.ojalgo.ann.ArtificialNeuralNetwork
-import org.ojalgo.array.Primitive64Array
-import java.util.concurrent.ThreadLocalRandom
 import org.deeplearning4j.nn.api.OptimizationAlgorithm
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.layers.DenseLayer
@@ -12,7 +9,10 @@ import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.nn.weights.WeightInit
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.learning.config.Sgd
+import org.nd4j.linalg.learning.config.Nesterovs
+import org.ojalgo.ann.ArtificialNeuralNetwork
+import org.ojalgo.array.Primitive64Array
+import java.util.concurrent.ThreadLocalRandom
 
 object PredictorModel {
 
@@ -77,6 +77,7 @@ object PredictorModel {
         OJALGO_NN {
 
             override fun predict(color: Color): FontShade {
+
                 val ann = ArtificialNeuralNetwork.builder(3, 3, 2).apply {
 
                     activator(0, ArtificialNeuralNetwork.Activator.IDENTITY)
