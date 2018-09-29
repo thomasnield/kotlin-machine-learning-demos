@@ -4,6 +4,7 @@ import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.abs
 import kotlin.math.exp
 
+// This is a still a work-in-progress. Need to implement Koma-based gradient descent
 
 fun neuralnetwork(op: NeuralNetworkBuilder.() -> Unit): NeuralNetwork {
     val nn = NeuralNetworkBuilder()

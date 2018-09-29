@@ -43,11 +43,17 @@ object PredictorModel {
 
     enum class Predictor {
 
+        /**
+         * Uses a simple formula to classify colors as LIGHT or DARK
+         */
         FORMULAIC {
             override fun predict(color: Color) = (1 - (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue))
                         .let { if (it < .5) FontShade.DARK else FontShade.LIGHT }
         },
-
+        /**
+         * My implementation from scratch, still a work-in-progress
+         * I need to implement gradient descent using Koma
+         */
         TOMS_FEED_FORWARD_NN {
             override fun predict(color: Color): FontShade {
 
@@ -73,7 +79,10 @@ object PredictorModel {
                 }
             }
         },
-
+        /**
+         * Uses ojAlgo's artificial neural network API
+         * Which works really well and is much more lightweight than DL4J
+         */
         OJALGO_NN {
 
             override fun predict(color: Color): FontShade {
@@ -102,6 +111,10 @@ object PredictorModel {
             }
         },
 
+        /**
+         * Uses DeepLearning4J, a heavyweight neural network library that is probably overkill for this toy problem.
+         * However, DL4J is a good library to use for large real-world projects.
+         */
         DL4J_NN {
             override fun predict(color: Color): FontShade {
 
@@ -130,10 +143,11 @@ object PredictorModel {
 
 
                 // train for 1000 iterations (epochs)
-                (1..1000).forEach {
+                repeat(1000) {
                     dl4jNN.fit(examples, outcomes)
                 }
-                
+
+                // Test the input color and predict it as LIGHT or DARK
                 val result = dl4jNN.output(Nd4j.create(colorAttributes(color))).toDoubleVector()
 
                 println(result.joinToString(",  "))
