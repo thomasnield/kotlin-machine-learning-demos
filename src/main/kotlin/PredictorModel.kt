@@ -32,9 +32,11 @@ object PredictorModel {
     fun preTrainData() {
 
         PredictorModel::class.java.getResource("color_training_set.csv").readText().lines()
-                .map { it.split(",").map { it.toInt() } }
+                .asSequence()
+                .map { s -> s.split(",").map { it.toInt() } }
                 .map { Color.rgb(it[0], it[1], it[2]) }
                 .map { CategorizedInput(it, Predictor.FORMULAIC.predict(it))  }
+                .toList()
                 .forEach {
                     inputs += it
                 }
@@ -58,8 +60,8 @@ object PredictorModel {
             override fun predict(color: Color): FontShade {
 
                 val bruteForceNN = neuralnetwork {
-                    inputlayer(4)
-                    hiddenlayer(4)
+                    inputlayer(3)
+                    hiddenlayer(3)
                     outputlayer(2)
                 }
 
