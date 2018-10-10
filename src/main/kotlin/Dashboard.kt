@@ -24,116 +24,174 @@ class MainView: View() {
             .also { backgroundColor.set(it) }
 
     override val root = splitpane {
+        orientation = Orientation.VERTICAL
 
-        title = "Light/Dark Text Suggester"
-        orientation = Orientation.HORIZONTAL
+        splitpane {
 
-        borderpane {
+            title = "Light/Dark Text Suggester"
+            orientation = Orientation.HORIZONTAL
 
-            top = label("TRAIN") {
-                style {
-                    textFill =  Color.RED
-                    fontWeight = FontWeight.BOLD
+            borderpane {
+
+                top = label("TRAIN") {
+                    style {
+                        textFill =  Color.RED
+                        fontWeight = FontWeight.BOLD
+                    }
                 }
+
+                center = form {
+                    fieldset {
+
+                        field("Which looks better?").hbox {
+                            button("DARK") {
+                                textFill = Color.BLACK
+                                useMaxWidth = true
+
+                                backgroundProperty().bind(
+                                        backgroundColor.select { ReadOnlyObjectWrapper(Background(BackgroundFill(it, CornerRadii.EMPTY, Insets.EMPTY))) }
+                                )
+
+                                setOnAction {
+
+                                    PredictorModel += CategorizedInput(backgroundColor.get(), FontShade.DARK)
+                                    assignRandomColor()
+                                }
+                            }
+
+                            button("LIGHT") {
+                                textFill = Color.WHITE
+                                useMaxWidth = true
+
+                                backgroundProperty().bind(
+                                        backgroundColor.select { ReadOnlyObjectWrapper(Background(BackgroundFill(it, CornerRadii.EMPTY, Insets.EMPTY))) }
+                                )
+
+                                setOnAction {
+                                    PredictorModel += CategorizedInput(backgroundColor.get(), FontShade.DARK)
+
+                                    assignRandomColor()
+                                }
+                            }
+                        }
+                    }
+
+                    fieldset {
+                        field("Model") {
+                            combobox(PredictorModel.selectedPredictor) {
+
+                                PredictorModel.Predictor.values().forEach { items.add(it) }
+                            }
+                        }
+                    }
+
+                    fieldset {
+                        field("Pre-Train") {
+                            button("Train 1345 Colors") {
+                                useMaxWidth = true
+                                setOnAction {
+                                    PredictorModel.preTrainData()
+                                    isDisable = true
+                                }
+                            }
+                        }
+                    }
+                }
+
             }
 
-            center = form {
-                fieldset {
+            borderpane {
 
-                    field("Which looks better?").hbox {
-                        button("DARK") {
-                            textFill = Color.BLACK
-                            useMaxWidth = true
-
-                            backgroundProperty().bind(
-                                    backgroundColor.select { ReadOnlyObjectWrapper(Background(BackgroundFill(it, CornerRadii.EMPTY, Insets.EMPTY))) }
-                            )
-
-                            setOnAction {
-
-                                PredictorModel += CategorizedInput(backgroundColor.get(), FontShade.DARK)
-                                assignRandomColor()
-                            }
-                        }
-
-                        button("LIGHT") {
-                            textFill = Color.WHITE
-                            useMaxWidth = true
-
-                            backgroundProperty().bind(
-                                    backgroundColor.select { ReadOnlyObjectWrapper(Background(BackgroundFill(it, CornerRadii.EMPTY, Insets.EMPTY))) }
-                            )
-
-                            setOnAction {
-                                PredictorModel += CategorizedInput(backgroundColor.get(), FontShade.DARK)
-
-                                assignRandomColor()
-                            }
-                        }
+                top = label("PREDICT") {
+                    style {
+                        textFill =  Color.RED
+                        fontWeight = FontWeight.BOLD
                     }
                 }
 
-                fieldset {
-                    field("Model") {
-                        combobox(PredictorModel.selectedPredictor) {
+                center = form {
+                    fieldset {
+                        field("Background") {
+                            colorpicker {
+                                valueProperty().onChange {
+                                    backgroundColor.set(it)
+                                }
 
-                            PredictorModel.Predictor.values().forEach { items.add(it) }
+                                customColors.forEach { println(it) }
+                            }
                         }
-                    }
-                }
+                        field("Result") {
+                            label("LOREM IPSUM") {
+                                backgroundProperty().bind(
+                                        backgroundColor.select { ReadOnlyObjectWrapper(Background(BackgroundFill(it, CornerRadii.EMPTY, Insets.EMPTY))) }
+                                )
 
-                fieldset {
-                    field("Pre-Train") {
-                        button("Train 1345 Colors") {
-                            useMaxWidth = true
-                            setOnAction {
-                                PredictorModel.preTrainData()
-                                isDisable = true
+                                backgroundColor.onChange {
+                                    val result = PredictorModel.predict(it!!)
+
+                                    text = result.toString()
+                                    textFill = result.color
+                                }
+
                             }
                         }
                     }
                 }
             }
-
         }
 
-        borderpane {
+        //WIP for neural network visualization
+        /*stackpane {
 
-            top = label("PREDICT") {
-                style {
-                    textFill =  Color.RED
-                    fontWeight = FontWeight.BOLD
-                }
-            }
+            hbox {
+                alignment = Pos.CENTER
 
-            center = form {
-                fieldset {
-                    field("Background") {
-                        colorpicker {
-                            valueProperty().onChange {
-                                backgroundColor.set(it)
-                            }
-
-                            customColors.forEach { println(it) }
-                        }
+                vbox {
+                    hboxConstraints {
+                        marginTop = 10.0
                     }
-                    field("Result") {
-                        label("LOREM IPSUM") {
-                            backgroundProperty().bind(
-                                    backgroundColor.select { ReadOnlyObjectWrapper(Background(BackgroundFill(it, CornerRadii.EMPTY, Insets.EMPTY))) }
-                            )
-
-                            backgroundColor.onChange {
-                                val result = PredictorModel.predict(it!!)
-
-                                text = result.toString()
-                                textFill = result.color
-                            }
-
-                        }
+                    circle(radius = 40.0) {
+                        fill = Color.RED
+                        vboxConstraints { marginBottom = 30.0 }
+                    }
+                    circle(radius = 40.0) {
+                        fill = Color.GREEN
+                        vboxConstraints { marginBottom = 30.0 }
+                    }
+                    circle(radius = 40.0) {
+                        fill = Color.BLUE
                     }
                 }
+
+                vbox {
+                    hboxConstraints {
+                        marginLeft = 80.0
+                        marginTop = 10.0
+                    }
+                    repeat(3) {
+                        circle(radius = 40.0) {
+                            fill = Color.LIGHTGREY
+                            vboxConstraints { marginBottom = 30.0 }
+                        }
+                    }
+                }
+
+                vbox {
+                    hboxConstraints {
+                        marginLeft = 80.0
+                        marginTop = 70.0
+                    }
+                    circle(radius = 40.0) {
+                        fill = Color.BLACK
+                        vboxConstraints { marginBottom = 30.0 }
+                    }
+                    circle(radius = 40.0) {
+                        fill = Color.WHITE
+                        stroke = Color.BLACK
+                        vboxConstraints { marginBottom = 30.0 }
+                    }
+                }
             }
-        }
+        }*/
     }
 }
