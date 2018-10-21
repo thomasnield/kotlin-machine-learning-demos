@@ -4,7 +4,9 @@ This is a simple neural network application that will suggest a LIGHT or DARK fo
 
 The training/predicting user interface was built with [TornadoFX](https://github.com/edvin/tornadofx).
 
-![](demo.gif)
+**Watch YouTube Video Here**
+
+[![](https://img.youtube.com/vi/tAioWlhKA90/hqdefault.jpg)](https://youtu.be/tAioWlhKA90)
 
 
 Currently there are three implementations: 
