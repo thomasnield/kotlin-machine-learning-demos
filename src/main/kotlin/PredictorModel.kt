@@ -91,7 +91,7 @@ object PredictorModel {
 
                 val ann = ArtificialNeuralNetwork.builder(3, 3, 2).apply {
 
-                    activator(0, ArtificialNeuralNetwork.Activator.RECTIFIER)
+                    activator(0, ArtificialNeuralNetwork.Activator.SIGMOID)
                     activator(1, ArtificialNeuralNetwork.Activator.SOFTMAX)
 
                     rate(.05)
@@ -126,7 +126,7 @@ object PredictorModel {
                         .updater(Nesterovs(.006, .9))
                         .l2(1e-4)
                         .list(
-                                DenseLayer.Builder().nIn(3).nOut(3).activation(Activation.IDENTITY).build(),
+                                DenseLayer.Builder().nIn(3).nOut(3).activation(Activation.RELU).build(),
                                 OutputLayer.Builder().nIn(3).nOut(2).activation(Activation.SOFTMAX).build()
                         ).pretrain(false)
                         .backprop(true)
