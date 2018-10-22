@@ -139,59 +139,5 @@ class MainView: View() {
                 }
             }
         }
-
-        //WIP for neural network visualization
-        /*stackpane {
-
-            hbox {
-                alignment = Pos.CENTER
-
-                vbox {
-                    hboxConstraints {
-                        marginTop = 10.0
-                    }
-                    circle(radius = 40.0) {
-                        fill = Color.RED
-                        vboxConstraints { marginBottom = 30.0 }
-                    }
-                    circle(radius = 40.0) {
-                        fill = Color.GREEN
-                        vboxConstraints { marginBottom = 30.0 }
-                    }
-                    circle(radius = 40.0) {
-                        fill = Color.BLUE
-                    }
-                }
-
-                vbox {
-                    hboxConstraints {
-                        marginLeft = 80.0
-                        marginTop = 10.0
-                    }
-                    repeat(3) {
-                        circle(radius = 40.0) {
-                            fill = Color.LIGHTGREY
-                            vboxConstraints { marginBottom = 30.0 }
-                        }
-                    }
-                }
-
-                vbox {
-                    hboxConstraints {
-                        marginLeft = 80.0
-                        marginTop = 70.0
-                    }
-                    circle(radius = 40.0) {
-                        fill = Color.BLACK
-                        vboxConstraints { marginBottom = 30.0 }
-                    }
-                    circle(radius = 40.0) {
-                        fill = Color.WHITE
-                        stroke = Color.BLACK
-                        vboxConstraints { marginBottom = 30.0 }
-                    }
-                }
-            }
-        }*/
     }
 }

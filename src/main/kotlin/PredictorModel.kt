@@ -91,7 +91,7 @@ object PredictorModel {
 
                 val ann = ArtificialNeuralNetwork.builder(3, 3, 2).apply {
 
-                    activator(0, ArtificialNeuralNetwork.Activator.IDENTITY)
+                    activator(0, ArtificialNeuralNetwork.Activator.RECTIFIER)
                     activator(1, ArtificialNeuralNetwork.Activator.SOFTMAX)
 
                     rate(.05)
