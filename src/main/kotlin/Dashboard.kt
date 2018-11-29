@@ -17,13 +17,13 @@ class MainApp: App(MainView::class)
 
 class MainView: View() {
 
-
     val backgroundColor = SimpleObjectProperty(Color.GRAY)
 
     fun assignRandomColor() = randomColor()
             .also { backgroundColor.set(it) }
 
     override val root = splitpane {
+        style = "-fx-font-size: 16pt; "
         orientation = Orientation.VERTICAL
 
         splitpane {
