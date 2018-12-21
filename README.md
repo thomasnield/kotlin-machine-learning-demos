@@ -6,7 +6,7 @@ The training/predicting user interface was built with [TornadoFX](https://github
 
 ## YouTube Walkthrough
 
-[![](https://img.youtube.com/vi/j1s69yf4a9Y/hqdefault.jpg)](https://youtu.be/j1s69yf4a9Y)
+[![](https://img.youtube.com/vi/tAioWlhKA90/hqdefault.jpg)](https://www.youtube.com/watch?v=tAioWlhKA90)
 
 ## Featured at KotlinConf 2018 in Amsterdam
 
