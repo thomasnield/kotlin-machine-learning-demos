@@ -4,10 +4,15 @@ This is a simple neural network application that will suggest a LIGHT or DARK fo
 
 The training/predicting user interface was built with [TornadoFX](https://github.com/edvin/tornadofx).
 
-**Watch YouTube Video Here**
+## YouTube Walkthrough
 
-[![](https://img.youtube.com/vi/tAioWlhKA90/hqdefault.jpg)](https://youtu.be/tAioWlhKA90)
+[![](https://img.youtube.com/vi/j1s69yf4a9Y/hqdefault.jpg)](https://youtu.be/j1s69yf4a9Y)
 
+## Featured at KotlinConf 2018 in Amsterdam
+
+[![](https://img.youtube.com/vi/-zTqtEcnM7A/hqdefault.jpg)](https://youtu.be/-zTqtEcnM7A)
+
+## Details
 
 Currently there are three implementations: 
 
@@ -21,5 +26,6 @@ For this simple toy example ojAlgo seems to perform the best, and is light and t
 Note also there is now a button to pre-train 1345 categorized colors. 
 
 Tariq Rashid's book [Build Your Own Neural Network](https://www.amazon.com/Make-Your-Own-Neural-Network/dp/1530826608/) is a tremendous resource, as well as [3Blue1Brown's Video](https://www.youtube.com/watch?v=aircAruvnKk&list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi). [Grokking Deep Learning](https://www.manning.com/books/grokking-deep-learning) is probably the most thorough and useful resource when you are ready to deep-dive.
+
 
 
