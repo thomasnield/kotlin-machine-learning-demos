@@ -88,7 +88,7 @@ object PredictorModel {
                     val newLoss = inputs.asSequence()
                             .map { (color, fontShade) ->
                                 (predictWithCandidates(color) - fontShade.targetOutput).pow(2)
-                            }.sum()
+                            }.average()
 
                     if (newLoss < currentLoss) {
                         currentLoss = newLoss
@@ -107,7 +107,7 @@ object PredictorModel {
                 val formulasLoss = inputs.asSequence()
                         .map { (color, fontShade) ->
                             ( (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) - fontShade.targetOutput).pow(2)
-                        }.sum()
+                        }.average()
 
                 println("BEST LOSS: $currentLoss, FORMULA'S LOSS: $formulasLoss \r\n")
 
