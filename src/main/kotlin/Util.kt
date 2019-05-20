@@ -1,3 +1,4 @@
+/*
 import org.ojalgo.algebra.Operation
 import org.ojalgo.algebra.ScalarOperation
 import org.ojalgo.matrix.BasicMatrix
@@ -17,7 +18,6 @@ fun <T, N: Number> Sequence<T>.toPrimitiveMatrix(vararg selectors: (T) -> N): Pr
         }
     }
 }
-
 fun <T, N: Number> Iterable<T>.toPrimitiveMatrix(vararg selectors: (T) -> N): PrimitiveMatrix {
     val items = toList()
 
@@ -135,3 +135,4 @@ operator fun <T, N: Number> ScalarOperation.Subtraction<T,N>.minus(number: N) = 
 
 
 
+*/

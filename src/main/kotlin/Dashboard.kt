@@ -11,7 +11,7 @@ import javafx.scene.text.FontWeight
 import tornadofx.*
 
 
-fun main(args: Array<String>) = Application.launch(MainApp::class.java, *args)
+fun main() = Application.launch(MainApp::class.java)
 
 class MainApp: App(MainView::class)
 

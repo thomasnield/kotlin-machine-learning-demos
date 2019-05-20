@@ -1,3 +1,4 @@
+/*
 import org.ojalgo.matrix.BasicMatrix
 import tornadofx.*
 import java.util.concurrent.ThreadLocalRandom
@@ -51,9 +52,11 @@ class NeuralNetwork(
     val calculatedLayers = hiddenLayers.plusElement(outputLayer)
 
 
-    /**
+    */
+/**
      * Input a set of training values for each node
-     */
+     *//*
+
     fun trainEntries(inputsAndTargets: Iterable<Pair<DoubleArray, DoubleArray>>) {
 
         // randomize if needed
@@ -111,9 +114,11 @@ sealed class Layer<N: Node>: Iterable<N> {
     override fun iterator() = nodes.iterator()
 }
 
+*/
 /**
  * An `InputLayer` belongs to the first layer and accepts the input values for each `InputNode`
- */
+ *//*
+
 class InputLayer(nodeCount: Int): Layer<InputNode>() {
 
     override val nodes = (0..(nodeCount-1)).asSequence()
@@ -121,9 +126,11 @@ class InputLayer(nodeCount: Int): Layer<InputNode>() {
             .toList()
 }
 
+*/
 /**
  * A `CalculatedLayer` is used for the hidden and output layers, and is derived off weights and values off each previous layer
- */
+ *//*
+
 class CalculatedLayer(nodeCount: Int): Layer<CalculatedNode>() {
 
     var feedingLayer: Layer<out Node> by singleAssign()
@@ -192,3 +199,4 @@ class NeuralNetworkBuilder {
 
     fun build() = NeuralNetwork(input, hidden, output)
 }
+*/

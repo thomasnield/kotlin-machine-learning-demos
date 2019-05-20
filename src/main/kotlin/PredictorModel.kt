@@ -1,6 +1,7 @@
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
 import javafx.scene.paint.Color
+import org.apache.commons.math3.distribution.NormalDistribution
 import org.deeplearning4j.nn.api.OptimizationAlgorithm
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration
 import org.deeplearning4j.nn.conf.layers.DenseLayer
@@ -10,9 +11,13 @@ import org.deeplearning4j.nn.weights.WeightInit
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.learning.config.Nesterovs
+import org.nield.kotlinstatistics.randomDistinct
+import org.nield.kotlinstatistics.randomFirst
 import org.ojalgo.ann.ArtificialNeuralNetwork
 import org.ojalgo.array.Primitive64Array
+import org.ojalgo.random.TDistribution
 import java.util.concurrent.ThreadLocalRandom
+import kotlin.math.pow
 
 object PredictorModel {
 
@@ -49,14 +54,68 @@ object PredictorModel {
          * Uses a simple formula to classify colors as LIGHT or DARK
          */
         FORMULAIC {
-            override fun predict(color: Color) = (1 - (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue))
-                        .let { if (it < .5) FontShade.DARK else FontShade.LIGHT }
+            override fun predict(color: Color) =  (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue)
+                        .let { if (it > .5) FontShade.DARK else FontShade.LIGHT }
         },
+
+        LINEAR_REGRESSION_HILL_CLIMBING {
+
+            override fun predict(color: Color): FontShade {
+
+                var redWeightCandidate = 0.0
+                var greenWeightCandidate = 0.0
+                var blueWeightCandidate = 0.0
+
+                var currentLoss = Double.MAX_VALUE
+
+                val normalDistribution = NormalDistribution(0.0, 1.0)
+
+                fun predictWithCandidates(color: Color) =
+                        (redWeightCandidate * color.red + greenWeightCandidate * color.green + blueWeightCandidate * color.blue)
+
+                repeat(10000) {
+
+                    val selectedColor = (0..2).asSequence().randomFirst()
+                    val adjust = normalDistribution.sample()
+
+                    // make random adjustment to two of the colors
+                    when {
+                        selectedColor == 0 -> redWeightCandidate += adjust
+                        selectedColor == 1 -> greenWeightCandidate += adjust
+                        selectedColor == 2 -> blueWeightCandidate += adjust
+                    }
+
+                    // if improvement doesn't happen, reverse
+
+                    val newLoss = inputs.asSequence()
+                            .map { (color, fontShade) ->
+                                (predictWithCandidates(color) - fontShade.outputValue[1]).pow(2)
+                            }.sum()
+
+                    if (newLoss < currentLoss) {
+                        currentLoss = newLoss
+                    } else {
+                        // revert if no improvement happens
+                        when {
+                            selectedColor == 0 -> redWeightCandidate -= adjust
+                            selectedColor == 1 -> greenWeightCandidate -= adjust
+                            selectedColor == 2 -> blueWeightCandidate -= adjust
+                        }
+                    }
+                }
+
+                println("$redWeightCandidate $greenWeightCandidate $blueWeightCandidate")
+
+                return predictWithCandidates(color)
+                        .let { if (it > .5) FontShade.DARK else FontShade.LIGHT }
+            }
+        },
+
         /**
          * My implementation from scratch, still a work-in-progress
          * I need to implement gradient descent using Koma
          */
-        TOMS_FEED_FORWARD_NN {
+        /*TOMS_FEED_FORWARD_NN {
             override fun predict(color: Color): FontShade {
 
                 val bruteForceNN = neuralnetwork {
@@ -80,7 +139,7 @@ object PredictorModel {
                     else -> FontShade.LIGHT
                 }
             }
-        },
+        },*/
         /**
          * Uses ojAlgo's artificial neural network API
          * Which works really well and is much more lightweight than DL4J

@@ -28,9 +28,10 @@ dependencies {
 
     compile 'no.tornado:tornadofx:1.+'
 
-    compile 'org.ojalgo:ojalgo:46.1.0'
+    compile 'org.ojalgo:ojalgo:47.2.0'
     compile 'org.deeplearning4j:deeplearning4j-core:1.0.0-beta2'
     compile 'org.nd4j:nd4j-native-platform:1.0.0-beta2'
+    implementation 'org.nield:kotlin-statistics:1.2.1'
 }
 
 task fatJar(type: Jar) {
