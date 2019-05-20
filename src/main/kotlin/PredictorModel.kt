@@ -11,11 +11,9 @@ import org.deeplearning4j.nn.weights.WeightInit
 import org.nd4j.linalg.activations.Activation
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.learning.config.Nesterovs
-import org.nield.kotlinstatistics.randomDistinct
 import org.nield.kotlinstatistics.randomFirst
 import org.ojalgo.ann.ArtificialNeuralNetwork
 import org.ojalgo.array.Primitive64Array
-import org.ojalgo.random.TDistribution
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.pow
 
@@ -89,7 +87,7 @@ object PredictorModel {
 
                     val newLoss = inputs.asSequence()
                             .map { (color, fontShade) ->
-                                (predictWithCandidates(color) - fontShade.outputValue[1]).pow(2)
+                                (predictWithCandidates(color) - fontShade.targetOutput).pow(2)
                             }.sum()
 
                     if (newLoss < currentLoss) {
@@ -104,7 +102,14 @@ object PredictorModel {
                     }
                 }
 
-                println("$redWeightCandidate $greenWeightCandidate $blueWeightCandidate")
+                println("${redWeightCandidate}R + ${greenWeightCandidate}G + ${blueWeightCandidate}B")
+
+                val formulasLoss = inputs.asSequence()
+                        .map { (color, fontShade) ->
+                            ( (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) - fontShade.targetOutput).pow(2)
+                        }.sum()
+
+                println("BEST LOSS: $currentLoss, FORMULA'S LOSS: $formulasLoss \r\n")
 
                 return predictWithCandidates(color)
                         .let { if (it > .5) FontShade.DARK else FontShade.LIGHT }
@@ -126,7 +131,7 @@ object PredictorModel {
 
                 val trainingEntries = inputs.asSequence()
                         .map {
-                            colorAttributes(it.color) to it.fontShade.outputValue
+                            colorAttributes(it.color) to it.fontShade.outputArray
                         }.asIterable()
 
                 bruteForceNN.trainEntries(trainingEntries)
@@ -159,7 +164,7 @@ object PredictorModel {
                     val inputValues = inputs.asSequence().map { Primitive64Array.FACTORY.copy(* colorAttributes(it.color)) }
                             .toList()
 
-                    val outputValues = inputs.asSequence().map { Primitive64Array.FACTORY.copy(*it.fontShade.outputValue) }
+                    val outputValues = inputs.asSequence().map { Primitive64Array.FACTORY.copy(*it.fontShade.outputArray) }
                             .toList()
 
                     train(inputValues, outputValues)
@@ -198,7 +203,7 @@ object PredictorModel {
                         .let { Nd4j.create(it) }
 
                 val outcomes = inputs.asSequence()
-                        .map { it.fontShade.outputValue }
+                        .map { it.fontShade.outputArray }
                         .toList().toTypedArray()
                         .let { Nd4j.create(it) }
 
@@ -229,9 +234,9 @@ data class CategorizedInput(
         val fontShade: FontShade
 )
 
-enum class FontShade(val color: Color, val outputValue: DoubleArray){
-    DARK(Color.BLACK, doubleArrayOf(0.0, 1.0)),
-    LIGHT(Color.WHITE, doubleArrayOf(1.0,0.0))
+enum class FontShade(val color: Color, val targetOutput: Double, val outputArray: DoubleArray){
+    DARK(Color.BLACK, 1.0, doubleArrayOf(0.0, 1.0)),
+    LIGHT(Color.WHITE, 0.0, doubleArrayOf(1.0,0.0))
 }
 
 // UTILITIES
