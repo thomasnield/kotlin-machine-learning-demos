@@ -15,13 +15,15 @@ import org.nield.kotlinstatistics.randomFirst
 import org.ojalgo.ann.ArtificialNeuralNetwork
 import org.ojalgo.array.Primitive64Array
 import java.util.concurrent.ThreadLocalRandom
+import kotlin.math.exp
+import kotlin.math.ln
 import kotlin.math.pow
 
 object PredictorModel {
 
     val inputs = FXCollections.observableArrayList<CategorizedInput>()
 
-    val selectedPredictor = SimpleObjectProperty<Predictor>(Predictor.OJALGO_NN)
+    val selectedPredictor = SimpleObjectProperty<Predictor>(Predictor.OJALGO_NEURAL_NETWORK)
 
     fun predict(color: Color) = selectedPredictor.get().predict(color)
 
@@ -116,40 +118,77 @@ object PredictorModel {
             }
         },
 
-        /**
-         * My implementation from scratch, still a work-in-progress
-         * I need to implement gradient descent using Koma
-         */
-        /*TOMS_FEED_FORWARD_NN {
+
+        LOGISTIC_REGRESSION_HILL_CLIMBING {
+
+            // Helpful Resources:
+            // StatsQuest on YouTube: https://www.youtube.com/watch?v=yIYKR4sgzI8&list=PLblh5JKOoLUKxzEP5HA2d-Li7IJkHfXSe
+            // Brandon Foltz on YouTube: https://www.youtube.com/playlist?list=PLIeGtxpvyG-JmBQ9XoFD4rs-b3hkcX7Uu
             override fun predict(color: Color): FontShade {
 
-                val bruteForceNN = neuralnetwork {
-                    inputlayer(3)
-                    hiddenlayer(3)
-                    outputlayer(2)
+                var bestLikelihood = -10_000_000.0
+
+                // use hill climbing for optimization
+                val normalDistribution = NormalDistribution(0.0, 1.0)
+
+                var b0 = .01 // constant
+                var b1 = .01 // red beta
+                var b2 = .01 // green beta
+                var b3 = .01 // blue beta
+
+
+                fun predictProbability(color: Color) = 1.0 / (1 + exp(-(b0 + b1*color.red + b2*color.green + b3*color.blue)))
+
+                // 1 = DARK FONT, 0 = LIGHT FONT
+
+                repeat(10000) {
+
+                    val selectedBeta = (0..3).asSequence().randomFirst()
+                    val adjust = normalDistribution.sample()
+
+                    // make random adjustment to two of the colors
+                    when {
+                        selectedBeta == 0 -> b0 += adjust
+                        selectedBeta == 1 -> b1 += adjust
+                        selectedBeta == 2 -> b2 += adjust
+                        selectedBeta == 3 -> b3 += adjust
+                    }
+
+                    // calculate maximum likelihood
+                    val darkEstimates = inputs.asSequence()
+                            .filter { it.fontShade == FontShade.DARK }
+                            .map { ln(predictProbability(it.color)) }
+                            .sum()
+
+                    val lightEstimates = inputs.asSequence()
+                            .filter { it.fontShade == FontShade.LIGHT }
+                            .map { ln(1 - predictProbability(it.color)) }
+                            .sum()
+
+                    val likelihood = darkEstimates + lightEstimates
+
+                    if (bestLikelihood < likelihood) {
+                        bestLikelihood = likelihood
+                    } else {
+                        // revert if no improvement happens
+                        when {
+                            selectedBeta == 0 -> b0 -= adjust
+                            selectedBeta == 1 -> b1 -= adjust
+                            selectedBeta == 2 -> b2 -= adjust
+                            selectedBeta == 3 -> b3 -= adjust
+                        }
+                    }
                 }
 
-                val trainingEntries = inputs.asSequence()
-                        .map {
-                            colorAttributes(it.color) to it.fontShade.outputArray
-                        }.asIterable()
+                println("1.0 / (1 + exp(-($b0 + $b1*R + $b2*G + $b3*B))")
+                println("BEST LIKELIHOOD: $bestLikelihood")
 
-                bruteForceNN.trainEntries(trainingEntries)
-
-                val result = bruteForceNN.predictEntry(*colorAttributes(color))
-                println("DARK: ${result[0]} LIGHT: ${result[1]}")
-
-                return when {
-                    result[0] > result[1] -> FontShade.DARK
-                    else -> FontShade.LIGHT
-                }
+                return predictProbability(color)
+                        .let { if (it > .5) FontShade.DARK else FontShade.LIGHT }
             }
-        },*/
-        /**
-         * Uses ojAlgo's artificial neural network API
-         * Which works really well and is much more lightweight than DL4J
-         */
-        OJALGO_NN {
+        },
+
+        OJALGO_NEURAL_NETWORK {
 
             override fun predict(color: Color): FontShade {
 
@@ -181,7 +220,7 @@ object PredictorModel {
          * Uses DeepLearning4J, a heavyweight neural network library that is probably overkill for this toy problem.
          * However, DL4J is a good library to use for large real-world projects.
          */
-        DL4J_NN {
+        DL4J_NEURAL_NETWORK {
             override fun predict(color: Color): FontShade {
 
                 val dl4jNN = NeuralNetConfiguration.Builder()
