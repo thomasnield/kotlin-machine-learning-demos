@@ -18,3 +18,5 @@ Planned to be added:
 - Logistic regression (w/ gradient descent)
 - Random forest/decision tree
 - Continuous Naive Bayes
+
+![](https://i.imgur.com/SPVFfQ6.png)
