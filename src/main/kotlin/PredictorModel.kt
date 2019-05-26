@@ -70,7 +70,7 @@ object PredictorModel {
 
                 val normalDistribution = NormalDistribution(0.0, 1.0)
 
-                fun predictWithCandidates(color: Color) =
+                fun predict(color: Color) =
                         (redWeightCandidate * color.red + greenWeightCandidate * color.green + blueWeightCandidate * color.blue)
 
                 repeat(10000) {
@@ -85,13 +85,13 @@ object PredictorModel {
                         selectedColor == 2 -> blueWeightCandidate += adjust
                     }
 
-                    // if improvement doesn't happen, reverse
-
+                    // Calculate the loss, which is sum of squares
                     val newLoss = inputs.asSequence()
                             .map { (color, fontShade) ->
-                                (predictWithCandidates(color) - fontShade.targetOutput).pow(2)
-                            }.average()
+                                (predict(color) - fontShade.targetOutput).pow(2)
+                            }.sum()
 
+                    // If improvement doesn't happen, undo the move
                     if (newLoss < currentLoss) {
                         currentLoss = newLoss
                     } else {
@@ -113,7 +113,7 @@ object PredictorModel {
 
                 println("BEST LOSS: $currentLoss, FORMULA'S LOSS: $formulasLoss \r\n")
 
-                return predictWithCandidates(color)
+                return predict(color)
                         .let { if (it > .5) FontShade.DARK else FontShade.LIGHT }
             }
         },
@@ -188,6 +188,24 @@ object PredictorModel {
             }
         },
 
+        NEURAL_NETWORK_HILL_CLIMBING {
+            override fun predict(color: Color): FontShade {
+                val ann = neuralnetwork {
+                    inputlayer(3)
+                    hiddenlayer(3, ActivationFunction.RELU)
+                    outputlayer(2, ActivationFunction.RELU)
+                }
+
+                val trainingData = inputs.map { colorAttributes(it.color) to it.fontShade.outputArray }
+
+                ann.trainEntries(trainingData)
+
+                return ann.predictEntry(colorAttributes(color)).let {
+                    println("${it[0]} ${it[1]}")
+                    if (it[0] > it[1]) FontShade.LIGHT else FontShade.DARK
+                }
+            }
+        },
         OJALGO_NEURAL_NETWORK {
 
             override fun predict(color: Color): FontShade {
