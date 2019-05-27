@@ -55,7 +55,10 @@ class NeuralNetwork(
         }.toList()
 
         println("Training with ${entries.count()}")
-        repeat(100_000) {
+
+        val learningRate = .05
+
+        repeat(100_000) { epoch ->
 
             val randomlySelectedNode = allCalculatedNodes.randomFirst()
             val randomlySelectedFeedingNode = randomlySelectedNode.layer.feedingLayer.nodes.randomFirst()
@@ -64,7 +67,7 @@ class NeuralNetwork(
             val currentWeightValue = randomlySelectedNode.layer.weights[selectedWeightKey]
                     ?: throw Exception("$selectedWeightKey not found in ${randomlySelectedNode.layer.weights}")
 
-            val randomAdjust = tDistribution.sample().let {
+            val randomAdjust = tDistribution.sample().let { it * learningRate }.let {
                 when {
                     currentWeightValue + it < -1.0 -> -1.0 - currentWeightValue
                     currentWeightValue + it > 1.0 -> 1.0 - currentWeightValue
@@ -82,7 +85,7 @@ class NeuralNetwork(
                     }.average()
 
             if (totalLoss < bestLoss) {
-                println("$bestLoss -> $totalLoss")
+                println("epoch $epoch: $bestLoss -> $totalLoss")
                 bestLoss = totalLoss
             } else {
                 randomlySelectedNode.layer.modifyWeight(selectedWeightKey, -randomAdjust)
@@ -171,15 +174,16 @@ class CalculatedNode(index: Int, val layer: CalculatedLayer): Node(index) {
                 val weightKey = WeightKey(layer.index, feedingNode.index, index)
                 layer.weights[weightKey]!! * feedingNode.value
             }.sum()
-            .let { v -> layer.activationFunction.invoke(v) {
+            .let { v ->
 
-                    layer.asSequence().filter { it != this }.map {
-                        it.layer.feedingLayer.asSequence()
+                layer.activationFunction.invoke(v) {
+                    layer.asSequence().map { node ->
+                        node.layer.feedingLayer.asSequence()
                                 .map { feedingNode ->
-                                    val weightKey = WeightKey(layer.index, feedingNode.index, index)
+                                    val weightKey = WeightKey(layer.index, feedingNode.index, node.index)
                                     layer.weights[weightKey]!! * feedingNode.value
                                 }.sum()
-                    }.plus(v).toList().toDoubleArray()
+                    }.toList().toDoubleArray()
                 }
             }
 }
@@ -194,6 +198,9 @@ enum class ActivationFunction {
     SIGMOID {
         override fun invoke(x: Double, otherValues: () -> DoubleArray) =  1.0 / (1.0 + exp(-x))
     },
+    TANH {
+        override fun invoke(x: Double, otherValues: () -> DoubleArray) = kotlin.math.tanh(x)
+    },
     RELU {
         override fun invoke(x: Double, otherValues: () -> DoubleArray) = if (x < 0.0) 0.0 else x
     },
@@ -203,7 +210,7 @@ enum class ActivationFunction {
     SOFTMAX {
         override fun invoke(x: Double, otherValues: () -> DoubleArray) =
                 (exp(x) / otherValues().asSequence().map { exp(it) }.sum())
-                        .also { println("${x} / ${(otherValues().asSequence().map { exp(it) }.sum())} = $it") }
+                        /*.also { println("${exp(x)} / ${(otherValues().asSequence().map { exp(it) }.sum())} = $it") }*/
     };
 
     abstract fun invoke(x: Double, otherValues: () -> DoubleArray): Double

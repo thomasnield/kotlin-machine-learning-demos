@@ -29,9 +29,11 @@ object PredictorModel {
 
     operator fun plusAssign(categorizedInput: CategorizedInput)  {
         inputs += categorizedInput
+        Predictor.values().forEach { it.retrainFlag = true }
     }
     operator fun plusAssign(categorizedInput: Pair<Color,FontShade>)  {
         inputs += categorizedInput.let { CategorizedInput(it.first, it.second) }
+        Predictor.values().forEach { it.retrainFlag = true }
     }
 
     fun preTrainData() {
@@ -45,6 +47,8 @@ object PredictorModel {
                 .forEach {
                     inputs += it
                 }
+
+        Predictor.values().forEach { it.retrainFlag = true }
     }
 
 
@@ -190,22 +194,23 @@ object PredictorModel {
 
         NEURAL_NETWORK_HILL_CLIMBING {
 
-            val ann by lazy {
-                val ann = neuralnetwork {
-                    inputlayer(3)
-                    hiddenlayer(3, ActivationFunction.RELU)
-                    outputlayer(2, ActivationFunction.SIGMOID)
-                }
+            lateinit var artificialNeuralNetwork: NeuralNetwork
 
-                val trainingData = inputs.map { colorAttributes(it.color) to it.fontShade.outputArray }
-
-                ann.trainEntries(trainingData)
-                ann
-
-            }
             override fun predict(color: Color): FontShade {
 
-                return ann.predictEntry(colorAttributes(color)).let {
+                if (retrainFlag) {
+                    artificialNeuralNetwork = neuralnetwork {
+                        inputlayer(3)
+                        hiddenlayer(3, ActivationFunction.RELU)
+                        outputlayer(2, ActivationFunction.SOFTMAX)
+                    }
+
+                    val trainingData = inputs.map { colorAttributes(it.color) to it.fontShade.outputArray }
+
+                    artificialNeuralNetwork.trainEntries(trainingData)
+                    retrainFlag = false
+                }
+                return artificialNeuralNetwork.predictEntry(colorAttributes(color)).let {
                     println("${it[0]} ${it[1]}")
                     if (it[0] > it[1]) FontShade.LIGHT else FontShade.DARK
                 }
@@ -213,26 +218,32 @@ object PredictorModel {
         },
         OJALGO_NEURAL_NETWORK {
 
+            lateinit var artificialNeuralNetwork: ArtificialNeuralNetwork
+
             override fun predict(color: Color): FontShade {
 
-                val ann = ArtificialNeuralNetwork.builder(3, 3, 2).apply {
+                if (retrainFlag) {
+                    artificialNeuralNetwork = ArtificialNeuralNetwork.builder(3, 3, 2).apply {
 
-                    activator(0, ArtificialNeuralNetwork.Activator.RECTIFIER)
-                    activator(1, ArtificialNeuralNetwork.Activator.SOFTMAX)
+                        activator(0, ArtificialNeuralNetwork.Activator.RECTIFIER)
+                        activator(1, ArtificialNeuralNetwork.Activator.SOFTMAX)
 
-                    rate(.05)
-                    error(ArtificialNeuralNetwork.Error.CROSS_ENTROPY)
+                        rate(.05)
+                        error(ArtificialNeuralNetwork.Error.CROSS_ENTROPY)
 
-                    val inputValues = inputs.asSequence().map { Primitive64Array.FACTORY.copy(* colorAttributes(it.color)) }
-                            .toList()
+                        val inputValues = inputs.asSequence().map { Primitive64Array.FACTORY.copy(* colorAttributes(it.color)) }
+                                .toList()
 
-                    val outputValues = inputs.asSequence().map { Primitive64Array.FACTORY.copy(*it.fontShade.outputArray) }
-                            .toList()
+                        val outputValues = inputs.asSequence().map { Primitive64Array.FACTORY.copy(*it.fontShade.outputArray) }
+                                .toList()
 
-                    train(inputValues, outputValues)
-                }.get()
+                        train(inputValues, outputValues)
+                    }.get()
 
-                return ann.invoke(Primitive64Array.FACTORY.copy(*colorAttributes(color))).let {
+                    retrainFlag = false
+                }
+
+                return artificialNeuralNetwork.invoke(Primitive64Array.FACTORY.copy(*colorAttributes(color))).let {
                     println("${it[0]} ${it[1]}")
                     if (it[0] > it[1]) FontShade.LIGHT else FontShade.DARK
                 }
@@ -284,6 +295,8 @@ object PredictorModel {
 
             }
         };
+
+        var retrainFlag = true
 
         abstract fun predict(color: Color): FontShade
         override fun toString() = name.replace("_", " ")
