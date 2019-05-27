@@ -189,16 +189,21 @@ object PredictorModel {
         },
 
         NEURAL_NETWORK_HILL_CLIMBING {
-            override fun predict(color: Color): FontShade {
+
+            val ann by lazy {
                 val ann = neuralnetwork {
                     inputlayer(3)
                     hiddenlayer(3, ActivationFunction.RELU)
-                    outputlayer(2, ActivationFunction.RELU)
+                    outputlayer(2, ActivationFunction.SIGMOID)
                 }
 
                 val trainingData = inputs.map { colorAttributes(it.color) to it.fontShade.outputArray }
 
                 ann.trainEntries(trainingData)
+                ann
+
+            }
+            override fun predict(color: Color): FontShade {
 
                 return ann.predictEntry(colorAttributes(color)).let {
                     println("${it[0]} ${it[1]}")

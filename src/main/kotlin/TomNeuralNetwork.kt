@@ -1,6 +1,5 @@
 import org.apache.commons.math3.distribution.TDistribution
 import org.nield.kotlinstatistics.random
-import org.nield.kotlinstatistics.randomDistinct
 import org.nield.kotlinstatistics.randomFirst
 import tornadofx.singleAssign
 import java.util.concurrent.ThreadLocalRandom
@@ -55,29 +54,42 @@ class NeuralNetwork(
             it.nodes.asSequence()
         }.toList()
 
+        println("Training with ${entries.count()}")
         repeat(100_000) {
 
             val randomlySelectedNode = allCalculatedNodes.randomFirst()
             val randomlySelectedFeedingNode = randomlySelectedNode.layer.feedingLayer.nodes.randomFirst()
-            val randomlySelectedWeightKey = WeightKey(randomlySelectedNode.layer.index, randomlySelectedNode.index, randomlySelectedFeedingNode.index)
+            val selectedWeightKey = WeightKey(randomlySelectedNode.layer.index, randomlySelectedFeedingNode.index, randomlySelectedNode.index)
 
-            val randomAdjust = tDistribution.sample()
+            val currentWeightValue = randomlySelectedNode.layer.weights[selectedWeightKey]
+                    ?: throw Exception("$selectedWeightKey not found in ${randomlySelectedNode.layer.weights}")
 
-            randomlySelectedNode.layer.modifyWeight(randomlySelectedWeightKey, randomAdjust)
+            val randomAdjust = tDistribution.sample().let {
+                when {
+                    currentWeightValue + it < -1.0 -> -1.0 - currentWeightValue
+                    currentWeightValue + it > 1.0 -> 1.0 - currentWeightValue
+                    else -> it
+                }
+            }
 
-            val totalLoss = entries.asSequence()
-                    .flatMap {
-                        it.second.asSequence()
-                                .zip(predictEntry(it.first).asSequence()) { actual, predicted -> (actual-predicted).pow(2) }
+            randomlySelectedNode.layer.modifyWeight(selectedWeightKey, randomAdjust)
+
+            val totalLoss = entries
+                    .asSequence()
+                    .flatMap { (input,label) ->
+                      label.asSequence()
+                                .zip(predictEntry(input).asSequence()) { actual, predicted -> (actual-predicted).pow(2) }
                     }.average()
 
             if (totalLoss < bestLoss) {
-                //println("$bestLoss -> $totalLoss")
+                println("$bestLoss -> $totalLoss")
                 bestLoss = totalLoss
             } else {
-                randomlySelectedNode.layer.modifyWeight(randomlySelectedWeightKey, -randomAdjust)
+                randomlySelectedNode.layer.modifyWeight(selectedWeightKey, -randomAdjust)
             }
         }
+
+        calculatedLayers.forEach { println(it.weights) }
     }
 
     fun predictEntry(inputValues: DoubleArray): DoubleArray {
@@ -132,21 +144,13 @@ class CalculatedLayer(val index: Int, nodeCount: Int, val activationFunction: Ac
                 .flatMap { feedingNodeIndex ->
                     (0 until nodeCount).asSequence()
                             .map { nodeIndex ->
-                                WeightKey(index, feedingNodeIndex, nodeIndex) to 0.0
+                                WeightKey(index, feedingNodeIndex, nodeIndex) to randomWeightValue()
                             }
                 }.toMap().toMutableMap()
     }
 
     fun modifyWeight(key: WeightKey,  adjustment: Double) =
-            weights.compute(key) { k, v ->
-                ((v ?: 0.0) + adjustment).let {
-                    when {
-                        it < -1.0 -> -1.0
-                        it > 1.0 -> 1.0
-                        else -> it
-                    }
-                }
-            }
+            weights.compute(key) { k, v -> v!! + adjustment }
 }
 
 
@@ -156,36 +160,50 @@ sealed class Node(val index: Int) {
 }
 
 class InputNode(index: Int): Node(index) {
-    override var value = randomWeightValue()
+    override var value = 0.0
 }
 
 
-class CalculatedNode(index: Int, val layer: CalculatedLayer
-): Node(index) {
+class CalculatedNode(index: Int, val layer: CalculatedLayer): Node(index) {
 
-    override val value get() = layer.feedingLayer.asSequence()
+    override val value: Double get() = layer.feedingLayer.asSequence()
             .map { feedingNode ->
                 val weightKey = WeightKey(layer.index, feedingNode.index, index)
+                layer.weights[weightKey]!! * feedingNode.value
+            }.sum()
+            .let { v -> layer.activationFunction.invoke(v) {
 
-                layer.weights[weightKey]!! * feedingNode.value }
-            .sum()
-            .let { layer.activationFunction.invoke(it, layer) }
+                    layer.asSequence().filter { it != this }.map {
+                        it.layer.feedingLayer.asSequence()
+                                .map { feedingNode ->
+                                    val weightKey = WeightKey(layer.index, feedingNode.index, index)
+                                    layer.weights[weightKey]!! * feedingNode.value
+                                }.sum()
+                    }.plus(v).toList().toDoubleArray()
+                }
+            }
 }
 
 fun randomWeightValue() = ThreadLocalRandom.current().nextDouble(-1.0,1.0)
 
 enum class ActivationFunction {
+
+    IDENTITY {
+        override fun invoke(x: Double, otherValues: () -> DoubleArray) =  x
+    },
     SIGMOID {
-        override fun invoke(x: Double, calculatedLayer: CalculatedLayer) =  1.0 / (1.0 + exp(-x))
+        override fun invoke(x: Double, otherValues: () -> DoubleArray) =  1.0 / (1.0 + exp(-x))
     },
     RELU {
-        override fun invoke(x: Double, calculatedLayer: CalculatedLayer) = if (x < 0.0) 0.0 else x
+        override fun invoke(x: Double, otherValues: () -> DoubleArray) = if (x < 0.0) 0.0 else x
     },
     SOFTMAX {
-        override fun invoke(x: Double, calculatedLayer: CalculatedLayer) = exp(x) / calculatedLayer.nodes.asSequence().map { it.value }.map { exp(it) }.sum()
+        override fun invoke(x: Double, otherValues: () -> DoubleArray) =
+                (exp(x) / otherValues().asSequence().map { exp(it) }.sum())
+                        .also { println("${x} / ${(otherValues().asSequence().map { exp(it) }.sum())} = $it") }
     };
 
-    abstract fun invoke(x: Double, calculatedLayer: CalculatedLayer): Double
+    abstract fun invoke(x: Double, otherValues: () -> DoubleArray): Double
 }
 
 // BUILDERS
