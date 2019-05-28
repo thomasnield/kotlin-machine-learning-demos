@@ -201,13 +201,38 @@ object PredictorModel {
                 if (retrainFlag) {
                     artificialNeuralNetwork = neuralnetwork {
                         inputlayer(3)
-                        hiddenlayer(3, ActivationFunction.RELU)
+                        hiddenlayer(3, ActivationFunction.TANH)
                         outputlayer(2, ActivationFunction.SOFTMAX)
                     }
 
                     val trainingData = inputs.map { colorAttributes(it.color) to it.fontShade.outputArray }
 
-                    artificialNeuralNetwork.trainEntries(trainingData)
+                    artificialNeuralNetwork.trainEntriesHillClimbing(trainingData)
+                    retrainFlag = false
+                }
+                return artificialNeuralNetwork.predictEntry(colorAttributes(color)).let {
+                    println("${it[0]} ${it[1]}")
+                    if (it[0] > it[1]) FontShade.LIGHT else FontShade.DARK
+                }
+            }
+        },
+
+        NEURAL_NETWORK_SIMULATED_ANNEALING {
+
+            lateinit var artificialNeuralNetwork: NeuralNetwork
+
+            override fun predict(color: Color): FontShade {
+
+                if (retrainFlag) {
+                    artificialNeuralNetwork = neuralnetwork {
+                        inputlayer(3)
+                        hiddenlayer(3, ActivationFunction.TANH)
+                        outputlayer(2, ActivationFunction.SOFTMAX)
+                    }
+
+                    val trainingData = inputs.map { colorAttributes(it.color) to it.fontShade.outputArray }
+
+                    artificialNeuralNetwork.trainEntriesSimulatedAnnealing(trainingData)
                     retrainFlag = false
                 }
                 return artificialNeuralNetwork.predictEntry(colorAttributes(color)).let {
