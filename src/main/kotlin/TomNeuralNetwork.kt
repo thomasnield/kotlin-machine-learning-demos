@@ -56,26 +56,57 @@ class NeuralNetwork(
 
         println("Training with ${entries.count()}")
 
-        val learningRate = .5
+        val learningRate = .1
+
+        val weightsPlusBiasesIndices = calculatedLayers.asSequence()
+                .map { it.weights.count() + it.biases.count() }
+                .sum()
+                .let { 0 until it }
+                .toList().toIntArray()
+
+
+        val weightCutOff = calculatedLayers.asSequence()
+                .map { it.weights.count() }
+                .sum() - 1
 
         repeat(100_000) { epoch ->
+
+            val randomVariableIndex = weightsPlusBiasesIndices.random()
 
             val randomlySelectedNode = allCalculatedNodes.randomFirst()
             val randomlySelectedFeedingNode = randomlySelectedNode.layer.feedingLayer.nodes.randomFirst()
             val selectedWeightKey = WeightKey(randomlySelectedNode.layer.index, randomlySelectedFeedingNode.index, randomlySelectedNode.index)
 
-            val currentWeightValue = randomlySelectedNode.layer.weights[selectedWeightKey]
-                    ?: throw Exception("$selectedWeightKey not found in ${randomlySelectedNode.layer.weights}")
+            val randomAdjust = if (randomVariableIndex <= weightCutOff) {
 
-            val randomAdjust = tDistribution.sample().let { it * learningRate }.let {
-                when {
-                    currentWeightValue + it < -1.0 -> -1.0 - currentWeightValue
-                    currentWeightValue + it > 1.0 -> 1.0 - currentWeightValue
-                    else -> it
+                val currentWeightValue = randomlySelectedNode.layer.weights[selectedWeightKey]!!
+
+                val randomAdjust = tDistribution.sample().let { it * learningRate }.let {
+                    when {
+                        currentWeightValue + it < -1.0 -> -1.0 - currentWeightValue
+                        currentWeightValue + it > 1.0 -> 1.0 - currentWeightValue
+                        else -> it
+                    }
                 }
+
+                randomlySelectedNode.layer.modifyWeight(selectedWeightKey, randomAdjust)
+                randomAdjust
+            } else {
+
+                val currentBiasValue = randomlySelectedNode.layer.biases[randomlySelectedNode.index]!!
+
+                val randomAdjust = tDistribution.sample().let { it * learningRate }.let {
+                    when {
+                        currentBiasValue + it < 0.0 -> 0.0 - currentBiasValue
+                        currentBiasValue + it > 1.0 -> 1.0 - currentBiasValue
+                        else -> it
+                    }
+                }
+
+                randomlySelectedNode.layer.modifyBias(randomlySelectedNode.index, randomAdjust)
+                randomAdjust
             }
 
-            randomlySelectedNode.layer.modifyWeight(selectedWeightKey, randomAdjust)
 
             val totalLoss = entries
                     .asSequence()
@@ -88,7 +119,11 @@ class NeuralNetwork(
                 println("epoch $epoch: $bestLoss -> $totalLoss")
                 bestLoss = totalLoss
             } else {
-                randomlySelectedNode.layer.modifyWeight(selectedWeightKey, -randomAdjust)
+                if (randomVariableIndex <= weightCutOff) {
+                    randomlySelectedNode.layer.modifyWeight(selectedWeightKey, -randomAdjust)
+                } else {
+                    randomlySelectedNode.layer.modifyBias(randomlySelectedNode.index, -randomAdjust)
+                }
             }
         }
 
@@ -98,7 +133,6 @@ class NeuralNetwork(
     fun trainEntriesSimulatedAnnealing(inputsAndTargets: Iterable<Pair<DoubleArray, DoubleArray>>) {
 
         val entries = inputsAndTargets.toList()
-
 
         // use simulated annealing
         var bestLoss = Double.MAX_VALUE
@@ -113,29 +147,58 @@ class NeuralNetwork(
 
         println("Training with ${entries.count()}")
 
-        val learningRate = .5
+        val learningRate = .1
+
+        val weightsPlusBiasesIndices = calculatedLayers.asSequence()
+                .map { it.weights.count() + it.biases.count() }
+                .sum()
+                .let { 0 until it }
+                .toList().toIntArray()
+
+        val weightCutOff = calculatedLayers.asSequence()
+                .map { it.weights.count() }
+                .sum() - 1
 
         sequenceOf(
-                generateSequence(80.0) { t -> t - .0001 }.takeWhile { it >= 0 },
-                generateSequence(120.0) { t -> t - .0001 }.takeWhile { it >= 0 }
+                generateSequence(80.0) { t -> t - .0005 }.takeWhile { it >= 0 },
+                generateSequence(120.0) { t -> t - .0005 }.takeWhile { it >= 0 }
         ).flatMap { it }.forEach { temp ->
+
+            val randomVariableIndex = weightsPlusBiasesIndices.random()
 
             val randomlySelectedNode = allCalculatedNodes.randomFirst()
             val randomlySelectedFeedingNode = randomlySelectedNode.layer.feedingLayer.nodes.randomFirst()
             val selectedWeightKey = WeightKey(randomlySelectedNode.layer.index, randomlySelectedFeedingNode.index, randomlySelectedNode.index)
 
-            val currentWeightValue = randomlySelectedNode.layer.weights[selectedWeightKey]
-                    ?: throw Exception("$selectedWeightKey not found in ${randomlySelectedNode.layer.weights}")
+            val randomAdjust = if (randomVariableIndex <= weightCutOff) {
 
-            val randomAdjust = tDistribution.sample().let { it * learningRate }.let {
-                when {
-                    currentWeightValue + it < -1.0 -> -1.0 - currentWeightValue
-                    currentWeightValue + it > 1.0 -> 1.0 - currentWeightValue
-                    else -> it
+                val currentWeightValue = randomlySelectedNode.layer.weights[selectedWeightKey]!!
+
+                val randomAdjust = tDistribution.sample().let { it * learningRate }.let {
+                    when {
+                        currentWeightValue + it < -1.0 -> -1.0 - currentWeightValue
+                        currentWeightValue + it > 1.0 -> 1.0 - currentWeightValue
+                        else -> it
+                    }
                 }
-            }
 
-            randomlySelectedNode.layer.modifyWeight(selectedWeightKey, randomAdjust)
+                randomlySelectedNode.layer.modifyWeight(selectedWeightKey, randomAdjust)
+                randomAdjust
+            } else {
+
+                val currentBiasValue = randomlySelectedNode.layer.biases[randomlySelectedNode.index]!!
+
+                val randomAdjust = tDistribution.sample().let { it * learningRate }.let {
+                    when {
+                        currentBiasValue + it < 0.0 -> 0.0 - currentBiasValue
+                        currentBiasValue + it > 1.0 -> 1.0 - currentBiasValue
+                        else -> it
+                    }
+                }
+
+                randomlySelectedNode.layer.modifyBias(randomlySelectedNode.index, randomAdjust)
+                randomAdjust
+            }
 
             val newLoss = entries
                     .asSequence()
@@ -157,7 +220,11 @@ class NeuralNetwork(
                 //println("temp $temp: $newLoss <- $bestLoss")
                 currentLoss = newLoss
             } else {
-                randomlySelectedNode.layer.modifyWeight(selectedWeightKey, -randomAdjust)
+                if (randomVariableIndex <= weightCutOff) {
+                    randomlySelectedNode.layer.modifyWeight(selectedWeightKey, -randomAdjust)
+                } else {
+                    randomlySelectedNode.layer.modifyBias(randomlySelectedNode.index, -randomAdjust)
+                }
             }
         }
 
@@ -220,9 +287,18 @@ class CalculatedLayer(val index: Int, nodeCount: Int, val activationFunction: Ac
                             }
                 }.toMap().toMutableMap()
     }
+    val biases by lazy {
+        (0 until nodeCount).asSequence()
+                .map {
+                    it to 0.0
+                }.toMap().toMutableMap()
+    }
 
     fun modifyWeight(key: WeightKey,  adjustment: Double) =
             weights.compute(key) { k, v -> v!! + adjustment }
+
+    fun modifyBias(nodeId: Int, adjustment: Double) =
+            biases.compute(nodeId) { k,v -> v!! + adjustment }
 }
 
 
@@ -242,7 +318,7 @@ class CalculatedNode(index: Int, val layer: CalculatedLayer): Node(index) {
             .map { feedingNode ->
                 val weightKey = WeightKey(layer.index, feedingNode.index, index)
                 layer.weights[weightKey]!! * feedingNode.value
-            }.sum()
+            }.plus(layer.biases[index]!!).sum()
             .let { v ->
 
                 layer.activationFunction.invoke(v) {
@@ -251,7 +327,7 @@ class CalculatedNode(index: Int, val layer: CalculatedLayer): Node(index) {
                                 .map { feedingNode ->
                                     val weightKey = WeightKey(layer.index, feedingNode.index, node.index)
                                     layer.weights[weightKey]!! * feedingNode.value
-                                }.sum()
+                                }.plus(layer.biases[node.index]!!).sum()
                     }.toList().toDoubleArray()
                 }
             }
@@ -279,7 +355,6 @@ enum class ActivationFunction {
     SOFTMAX {
         override fun invoke(x: Double, otherValues: () -> DoubleArray) =
                 (exp(x) / otherValues().asSequence().map { exp(it) }.sum())
-                        /*.also { println("${exp(x)} / ${(otherValues().asSequence().map { exp(it) }.sum())} = $it") }*/
     };
 
     abstract fun invoke(x: Double, otherValues: () -> DoubleArray): Double
