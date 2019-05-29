@@ -4,6 +4,8 @@
 
 This is a Kotlin application that experiments with different machine learning algorithms to recommend a light/dark font against different background colors. 
 
+Some algorithms are built completely from scratch but others are showcased using a library. 
+
 The current algorithms/library implementations: 
 
 - Formulaic
