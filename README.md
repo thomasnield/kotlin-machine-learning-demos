@@ -9,6 +9,8 @@ The current algorithms/library implementations:
 - Formulaic
 - Linear regression (w/ hill climbing)
 - Logistic regression (w/ hill climbing)
+- Neural Network (w/ hill climbing)
+- Neural Network (w/ simulated annealing)
 - OjAlgo Neural Network 
 - DL4J Neural Network 
 
