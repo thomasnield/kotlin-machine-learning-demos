@@ -160,8 +160,7 @@ class NeuralNetwork(
                 .sum() - 1
 
         sequenceOf(
-                generateSequence(80.0) { t -> t - .0005 }.takeWhile { it >= 0 },
-                generateSequence(120.0) { t -> t - .0005 }.takeWhile { it >= 0 }
+                generateSequence(80.0) { t -> t - .0005 }.takeWhile { it >= 0 }
         ).flatMap { it }.forEach { temp ->
 
             val randomVariableIndex = weightsPlusBiasesIndices.random()
