@@ -14,6 +14,7 @@ import org.nd4j.linalg.learning.config.Nesterovs
 import org.nield.kotlinstatistics.randomFirst
 import org.ojalgo.ann.ArtificialNeuralNetwork
 import org.ojalgo.array.Primitive64Array
+import java.net.URL
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.exp
 import kotlin.math.ln
@@ -38,9 +39,14 @@ object PredictorModel {
 
     fun preTrainData() {
 
-        PredictorModel::class.java.getResource("color_training_set.csv").readText().lines()
+        URL("https://tinyurl.com/y2qmhfsr")
+                .readText().split(Regex("\\r?\\n"))
                 .asSequence()
-                .map { s -> s.split(",").map { it.toInt() } }
+                .drop(1)
+                .filter { it.isNotBlank() }
+                .map { s ->
+                    s.split(",").map { it.toInt() }
+                }
                 .map { Color.rgb(it[0], it[1], it[2]) }
                 .map { CategorizedInput(it, Predictor.FORMULAIC.predict(it))  }
                 .toList()
