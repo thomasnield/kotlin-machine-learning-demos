@@ -54,7 +54,7 @@ class MainView: View() {
 
                                 setOnAction {
 
-                                    PredictorModel += CategorizedInput(backgroundColor.get(), FontShade.DARK)
+                                    PredictorModel += LabeledColor(backgroundColor.get(), FontShade.DARK)
                                     assignRandomColor()
                                 }
                             }
@@ -68,7 +68,7 @@ class MainView: View() {
                                 )
 
                                 setOnAction {
-                                    PredictorModel += CategorizedInput(backgroundColor.get(), FontShade.DARK)
+                                    PredictorModel += LabeledColor(backgroundColor.get(), FontShade.DARK)
 
                                     assignRandomColor()
                                 }

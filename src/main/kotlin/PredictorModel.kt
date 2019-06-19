@@ -22,18 +22,18 @@ import kotlin.math.pow
 
 object PredictorModel {
 
-    val inputs = FXCollections.observableArrayList<CategorizedInput>()
+    val inputs = FXCollections.observableArrayList<LabeledColor>()
 
     val selectedPredictor = SimpleObjectProperty<Predictor>(Predictor.OJALGO_NEURAL_NETWORK)
 
     fun predict(color: Color) = selectedPredictor.get().predict(color)
 
-    operator fun plusAssign(categorizedInput: CategorizedInput)  {
-        inputs += categorizedInput
+    operator fun plusAssign(labeledColor: LabeledColor)  {
+        inputs += labeledColor
         Predictor.values().forEach { it.retrainFlag = true }
     }
     operator fun plusAssign(categorizedInput: Pair<Color,FontShade>)  {
-        inputs += categorizedInput.let { CategorizedInput(it.first, it.second) }
+        inputs += categorizedInput.let { LabeledColor(it.first, it.second) }
         Predictor.values().forEach { it.retrainFlag = true }
     }
 
@@ -48,7 +48,7 @@ object PredictorModel {
                     s.split(",").map { it.toInt() }
                 }
                 .map { Color.rgb(it[0], it[1], it[2]) }
-                .map { CategorizedInput(it, Predictor.FORMULAIC.predict(it))  }
+                .map { LabeledColor(it, Predictor.FORMULAIC.predict(it))  }
                 .toList()
                 .forEach {
                     inputs += it
@@ -98,7 +98,7 @@ object PredictorModel {
                     // Calculate the loss, which is sum of squares
                     val newLoss = inputs.asSequence()
                             .map { (color, fontShade) ->
-                                (predict(color) - fontShade.targetOutput).pow(2)
+                                (predict(color) - fontShade.intValue).pow(2)
                             }.sum()
 
                     // If improvement doesn't happen, undo the move
@@ -118,7 +118,7 @@ object PredictorModel {
 
                 val formulasLoss = inputs.asSequence()
                         .map { (color, fontShade) ->
-                            ( (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) - fontShade.targetOutput).pow(2)
+                            ( (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) - fontShade.intValue).pow(2)
                         }.average()
 
                 println("BEST LOSS: $currentLoss, FORMULA'S LOSS: $formulasLoss \r\n")
@@ -128,75 +128,169 @@ object PredictorModel {
             }
         },
 
-
         LOGISTIC_REGRESSION_HILL_CLIMBING {
+
+
+            var b0 = .01 // constant
+            var b1 = .01 // red beta
+            var b2 = .01 // green beta
+            var b3 = .01 // blue beta
+
+
+            fun predictProbability(color: Color) = 1.0 / (1 + exp(-(b0 + b1 * color.red + b2 * color.green + b3 * color.blue)))
 
             // Helpful Resources:
             // StatsQuest on YouTube: https://www.youtube.com/watch?v=yIYKR4sgzI8&list=PLblh5JKOoLUKxzEP5HA2d-Li7IJkHfXSe
             // Brandon Foltz on YouTube: https://www.youtube.com/playlist?list=PLIeGtxpvyG-JmBQ9XoFD4rs-b3hkcX7Uu
             override fun predict(color: Color): FontShade {
 
-                var bestLikelihood = -10_000_000.0
 
-                // use hill climbing for optimization
-                val normalDistribution = NormalDistribution(0.0, 1.0)
+                if (retrainFlag) {
+                    var bestLikelihood = -10_000_000.0
 
-                var b0 = .01 // constant
-                var b1 = .01 // red beta
-                var b2 = .01 // green beta
-                var b3 = .01 // blue beta
+                    // use hill climbing for optimization
+                    val normalDistribution = NormalDistribution(0.0, 1.0)
 
+                    b0 = .01 // constant
+                    b1 = .01 // red beta
+                    b2 = .01 // green beta
+                    b3 = .01 // blue beta
 
-                fun predictProbability(color: Color) = 1.0 / (1 + exp(-(b0 + b1*color.red + b2*color.green + b3*color.blue)))
+                    // 1 = DARK FONT, 0 = LIGHT FONT
 
-                // 1 = DARK FONT, 0 = LIGHT FONT
+                    repeat(50000) {
 
-                repeat(10000) {
+                        val selectedBeta = (0..3).asSequence().randomFirst()
+                        val adjust = normalDistribution.sample()
 
-                    val selectedBeta = (0..3).asSequence().randomFirst()
-                    val adjust = normalDistribution.sample()
-
-                    // make random adjustment to two of the colors
-                    when {
-                        selectedBeta == 0 -> b0 += adjust
-                        selectedBeta == 1 -> b1 += adjust
-                        selectedBeta == 2 -> b2 += adjust
-                        selectedBeta == 3 -> b3 += adjust
-                    }
-
-                    // calculate maximum likelihood
-                    val darkEstimates = inputs.asSequence()
-                            .filter { it.fontShade == FontShade.DARK }
-                            .map { ln(predictProbability(it.color)) }
-                            .sum()
-
-                    val lightEstimates = inputs.asSequence()
-                            .filter { it.fontShade == FontShade.LIGHT }
-                            .map { ln(1 - predictProbability(it.color)) }
-                            .sum()
-
-                    val likelihood = darkEstimates + lightEstimates
-
-                    if (bestLikelihood < likelihood) {
-                        bestLikelihood = likelihood
-                    } else {
-                        // revert if no improvement happens
+                        // make random adjustment to two of the colors
                         when {
-                            selectedBeta == 0 -> b0 -= adjust
-                            selectedBeta == 1 -> b1 -= adjust
-                            selectedBeta == 2 -> b2 -= adjust
-                            selectedBeta == 3 -> b3 -= adjust
+                            selectedBeta == 0 -> b0 += adjust
+                            selectedBeta == 1 -> b1 += adjust
+                            selectedBeta == 2 -> b2 += adjust
+                            selectedBeta == 3 -> b3 += adjust
+                        }
+
+                        // calculate maximum likelihood
+                        val darkEstimates = inputs.asSequence()
+                                .filter { it.fontShade == FontShade.DARK }
+                                .map { ln(predictProbability(it.color)) }
+                                .sum()
+
+                        val lightEstimates = inputs.asSequence()
+                                .filter { it.fontShade == FontShade.LIGHT }
+                                .map { ln(1 - predictProbability(it.color)) }
+                                .sum()
+
+                        val likelihood = darkEstimates + lightEstimates
+
+                        if (bestLikelihood < likelihood) {
+                            bestLikelihood = likelihood
+                        } else {
+                            // revert if no improvement happens
+                            when {
+                                selectedBeta == 0 -> b0 -= adjust
+                                selectedBeta == 1 -> b1 -= adjust
+                                selectedBeta == 2 -> b2 -= adjust
+                                selectedBeta == 3 -> b3 -= adjust
+                            }
                         }
                     }
-                }
 
-                println("1.0 / (1 + exp(-($b0 + $b1*R + $b2*G + $b3*B))")
-                println("BEST LIKELIHOOD: $bestLikelihood")
+                    println("1.0 / (1 + exp(-($b0 + $b1*R + $b2*G + $b3*B))")
+                    println("BEST LIKELIHOOD: $bestLikelihood")
+                    retrainFlag = false
+                }
 
                 return predictProbability(color)
                         .let { if (it > .5) FontShade.DARK else FontShade.LIGHT }
             }
         },
+
+/*        DECISION_TREE {
+            override fun predict(color: Color): FontShade {
+
+                class Feature(val name: String, val mapper: (Color) -> Double)
+
+                val features = listOf(
+                        Feature("Red") { it.red * 255.0 },
+                        Feature("Green") { it.green * 255.0 },
+                        Feature("Blue") { it.blue * 255.0 }
+                )
+
+                fun giniImpurity(sampleColors: List<LabeledColor>): Double {
+                    val darkColorCount = sampleColors.count { it.fontShade == FontShade.DARK }.toDouble()
+                    val lightColorCount = sampleColors.count { it.fontShade == FontShade.LIGHT }.toDouble()
+                    val totalColorCount = sampleColors.count().toDouble()
+
+                    return 1.0 - (darkColorCount / totalColorCount  + .0001).pow(2) -
+                            (lightColorCount / totalColorCount + .0001).pow(2)
+                }
+
+                fun giniImpurityForFeature(feature: Feature,
+                                           splitValue: Double,
+                                           sampleColors: List<LabeledColor>): Double {
+
+                    val darkColorCount = sampleColors.count { feature.mapper(it.color) >= splitValue }.toDouble()
+                    val lightColorCount = sampleColors.count { feature.mapper(it.color) < splitValue }.toDouble()
+                    val totalColorCount = sampleColors.count().toDouble()
+
+                    return 1.0 - (darkColorCount / totalColorCount  + .0001).pow(2) -
+                            (lightColorCount / totalColorCount + .0001).pow(2)
+                }
+
+                fun splitContinuousVariable(feature: Feature, sampleColors: List<LabeledColor>): Double? {
+
+                    val featureValues = sampleColors.asSequence().map { feature.mapper(it.color) }.distinct().toList()
+
+                    val bestSplit = featureValues.asSequence().zipWithNext { value1, value2 -> (value1 + value2) / 2.0 }
+                            .minBy { giniImpurityForFeature(feature, it, sampleColors) }
+
+                    return bestSplit
+                }
+
+                class TreeLeaf(val feature: Feature,
+                               val splitValue: Double,
+                               val sampleColors: List<LabeledColor>,
+                               val previousLeaf: TreeLeaf? = null) {
+
+                    val darkColors = sampleColors.filter { it.fontShade == FontShade.DARK }
+                    val lightColors = sampleColors.filter { it.fontShade == FontShade.LIGHT }
+
+                    val giniImpurity = giniImpurityForFeature(feature, splitValue, sampleColors)
+
+                    val darkLeaf = buildLeaf(darkColors)
+                    val lightLeaf = buildLeaf(lightColors)
+
+                    private fun buildLeaf(sampleColors: List<LabeledColor>): TreeLeaf? {
+                        val (bestFeature, bestSplit) = features.asSequence()
+                                .map { feature ->
+                                    feature to splitContinuousVariable(feature, sampleColors)
+                                }.filter { (_, split) ->
+                                    split != null
+                                }.minBy { (feature, split) ->
+                                    giniImpurityForFeature(feature, split!!, sampleColors)
+                                }!!
+
+                        return if (previousLeaf == null || giniImpurityForFeature(bestFeature, bestSplit!!, sampleColors) < previousLeaf.giniImpurity)
+                            TreeLeaf(bestFeature, bestSplit!!, sampleColors)
+                        else
+                            null
+                    }
+
+                    fun predict(color: Color) {
+
+                        val featureValue = feature.mapper(color)
+
+                        when {
+                            featureValue >= splitValue -> if (darkLeaf == null) darkLeaf!!.
+                        }
+                    }
+
+
+                }
+            }
+        },*/
 
         NEURAL_NETWORK_HILL_CLIMBING {
 
@@ -247,6 +341,7 @@ object PredictorModel {
                 }
             }
         },
+
         OJALGO_NEURAL_NETWORK {
 
             lateinit var artificialNeuralNetwork: ArtificialNeuralNetwork
@@ -335,12 +430,12 @@ object PredictorModel {
 
 }
 
-data class CategorizedInput(
+data class LabeledColor(
         val color: Color,
         val fontShade: FontShade
 )
 
-enum class FontShade(val color: Color, val targetOutput: Double, val outputArray: DoubleArray){
+enum class FontShade(val color: Color, val intValue: Double, val outputArray: DoubleArray){
     DARK(Color.BLACK, 1.0, doubleArrayOf(0.0, 1.0)),
     LIGHT(Color.WHITE, 0.0, doubleArrayOf(1.0,0.0))
 }
