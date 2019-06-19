@@ -310,7 +310,7 @@ object PredictorModel {
 
                 val tree = buildLeaf(inputs)
 
-                return tree!!.predict(color)
+                return tree!!.predict(color)?.also(::println)
             }
         },
 
