@@ -214,7 +214,9 @@ object PredictorModel {
             // Helpful Resources:
             // StatusQuest on YouTube: https://www.youtube.com/watch?v=7VeUPuFGJHk
 
-            inner class Feature(val name: String, val mapper: (Color) -> Double)
+            inner class Feature(val name: String, val mapper: (Color) -> Double) { 
+                override fun toString() = name 
+            }
 
             val features = listOf(
                     Feature("Red") { it.red * 255.0 },
@@ -272,6 +274,7 @@ object PredictorModel {
                     null
             }
 
+
             inner class TreeLeaf(val feature: Feature,
                            val splitValue: Double,
                            val samples: List<LabeledColor>) {
@@ -279,10 +282,14 @@ object PredictorModel {
                 val goodWeatherItems = samples.filter { it.fontShade == FontShade.DARK }
                 val badWeatherItems = samples.filter { it.fontShade == FontShade.LIGHT }
 
+                val positiveItems = samples.filter { feature.mapper(it.color) >= splitValue }
+                val negativeItems = samples.filter { feature.mapper(it.color) < splitValue }
+
                 val giniImpurity = giniImpurityForSplit(feature, splitValue, samples)
 
                 val featurePositiveLeaf: TreeLeaf? = buildLeaf(samples.filter { feature.mapper(it.color) >= splitValue }, this)
                 val featureNegativeLeaf: TreeLeaf? = buildLeaf(samples.filter { feature.mapper(it.color) < splitValue }, this)
+
 
                 fun predict(color: Color): Double {
 
@@ -300,11 +307,26 @@ object PredictorModel {
                         }
                     }
                 }
+
+                override fun toString() = "$feature split on $splitValue, ${negativeItems.count()}|${positiveItems.count()}, Impurity: $giniImpurity"
+
             }
+
+
+            fun recurseAndPrintTree(leaf: TreeLeaf?, depth: Int = 0) {
+
+                if (leaf != null) {
+                    println("\t".repeat(depth) + "($depth): $leaf")
+                    recurseAndPrintTree(leaf.featureNegativeLeaf, depth + 1)
+                    recurseAndPrintTree(leaf.featurePositiveLeaf, depth + 1)
+                }
+            }
+
 
             override fun predict(color: Color): FontShade {
 
                 val tree = buildLeaf(inputs)
+                recurseAndPrintTree(tree)
 
                 return if (tree!!.predict(color) >= .5) FontShade.DARK else FontShade.LIGHT
             }
@@ -315,8 +337,11 @@ object PredictorModel {
             // Helpful Resources:
             // StatusQuest on YouTube: https://www.youtube.com/watch?v=7VeUPuFGJHk
 
-            val featureSampleCount = 2
-            inner class Feature(val name: String, val mapper: (Color) -> Double)
+            
+            inner class Feature(val name: String, val mapper: (Color) -> Double) {
+                override fun toString() = name
+            }
+
 
             val features = listOf(
                     Feature("Red") { it.red * 255.0 },
@@ -378,8 +403,11 @@ object PredictorModel {
                                  val splitValue: Double,
                                  val samples: List<LabeledColor>) {
 
-                val goodWeatherItems = samples.filter { it.fontShade == FontShade.DARK }
-                val badWeatherItems = samples.filter { it.fontShade == FontShade.LIGHT }
+                val darkItems = samples.filter { it.fontShade == FontShade.DARK }
+                val lightItems = samples.filter { it.fontShade == FontShade.LIGHT }
+
+                val positiveItems = samples.filter { feature.mapper(it.color) >= splitValue }
+                val negativeItems = samples.filter { feature.mapper(it.color) < splitValue }
 
                 val giniImpurity = giniImpurityForSplit(feature, splitValue, samples)
 
@@ -392,14 +420,26 @@ object PredictorModel {
 
                     return when {
                         featureValue >= splitValue -> when {
-                            featurePositiveLeaf == null -> (goodWeatherItems.count { feature.mapper(it.color) >= splitValue }.toDouble() / samples.count { feature.mapper(it.color) >= splitValue }.toDouble())
+                            featurePositiveLeaf == null -> (darkItems.count { feature.mapper(it.color) >= splitValue }.toDouble() / samples.count { feature.mapper(it.color) >= splitValue }.toDouble())
                             else -> featurePositiveLeaf.predict(color)
                         }
                         else -> when {
-                            featureNegativeLeaf == null -> (goodWeatherItems.count { feature.mapper(it.color) < splitValue }.toDouble() / samples.count { feature.mapper(it.color) < splitValue }.toDouble())
+                            featureNegativeLeaf == null -> (darkItems.count { feature.mapper(it.color) < splitValue }.toDouble() / samples.count { feature.mapper(it.color) < splitValue }.toDouble())
                             else -> featureNegativeLeaf.predict(color)
                         }
                     }
+                }
+
+                override fun toString() = "$feature split on $splitValue, ${negativeItems.count()}|${positiveItems.count()}, Impurity: $giniImpurity"
+
+            }
+
+            fun recurseAndPrintTree(leaf: TreeLeaf?, depth: Int = 0) {
+
+                if (leaf != null) {
+                    println("\t".repeat(depth) + "($leaf)")
+                    recurseAndPrintTree(leaf.featureNegativeLeaf, depth + 1)
+                    recurseAndPrintTree(leaf.featurePositiveLeaf, depth + 1)
                 }
             }
 
@@ -413,9 +453,9 @@ object PredictorModel {
                 if (retrainFlag) {
                     randomForest = (1..300).asSequence()
                             .map {
-                                buildLeaf(samples = inputs.random(bootStrapSampleCount), featureSampleSize = 3)!!
+                                buildLeaf(samples = inputs.random(bootStrapSampleCount), featureSampleSize = 2)!!
                             }.toList()
-
+                    
                     retrainFlag = false
                 }
 
