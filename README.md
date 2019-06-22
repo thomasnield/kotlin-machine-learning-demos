@@ -11,6 +11,8 @@ The current algorithms/library implementations:
 - Formulaic
 - Linear regression (w/ hill climbing)
 - Logistic regression (w/ hill climbing)
+- Decision Tree
+- Random Forest
 - Neural Network (w/ hill climbing)
 - Neural Network (w/ simulated annealing)
 - OjAlgo Neural Network 
@@ -20,7 +22,6 @@ Planned to be added:
 
 - Linear regression (w/ gradient descent)
 - Logistic regression (w/ gradient descent)
-- Random forest/decision tree
 - Continuous Naive Bayes
 - SMILE linear regression
 - SMILE logistic regression
