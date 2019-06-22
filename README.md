@@ -23,8 +23,5 @@ Planned to be added:
 - Linear regression (w/ gradient descent)
 - Logistic regression (w/ gradient descent)
 - Continuous Naive Bayes
-- SMILE linear regression
-- SMILE logistic regression
-- SMILE decision trees/random forests
 
 ![](https://i.imgur.com/SPVFfQ6.png)
