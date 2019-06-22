@@ -222,70 +222,81 @@ object PredictorModel {
                     Feature("Blue") { it.blue * 255.0 }
             )
 
-            fun giniImpurityForFeature(feature: Feature,
-                                       splitValue: Double,
-                                       sampleColors: List<LabeledColor>): Double {
+            fun giniImpurity(samples: List<LabeledColor>): Double {
 
-                val darkColorCount = sampleColors.count { feature.mapper(it.color) >= splitValue }.toDouble()
-                val lightColorCount = sampleColors.count { feature.mapper(it.color) < splitValue }.toDouble()
-                val totalColorCount = sampleColors.count().toDouble()
+                val totalSampleCount = samples.count().toDouble()
 
-                return 1.0 - (darkColorCount / totalColorCount).pow(2) -
-                        (lightColorCount / totalColorCount).pow(2)
+                return 1.0 - (samples.count { it.fontShade == FontShade.DARK }.toDouble() / totalSampleCount).pow(2) -
+                        (samples.count {  it.fontShade == FontShade.LIGHT }.toDouble() / totalSampleCount).pow(2)
             }
 
-            fun splitContinuousVariable(feature: Feature, sampleColors: List<LabeledColor>): Double? {
+            fun giniImpurityForSplit(feature: Feature, splitValue: Double, samples: List<LabeledColor>): Double {
+                val positiveFeatureSamples = samples.filter { feature.mapper(it.color) >= splitValue }
+                val negativeFeatureSamples = samples.filter { feature.mapper(it.color) < splitValue }
 
-                val featureValues = sampleColors.asSequence().map { feature.mapper(it.color) }.distinct().toList()
+                val positiveImpurity = giniImpurity(positiveFeatureSamples)
+                val negativeImpurity = giniImpurity(negativeFeatureSamples)
+
+                return (positiveImpurity * (positiveFeatureSamples.count().toDouble() / samples.count().toDouble())) +
+                        (negativeImpurity * (negativeFeatureSamples.count().toDouble() / samples.count().toDouble()))
+            }
+
+            fun splitContinuousVariable(feature: Feature, samples: List<LabeledColor>): Double? {
+
+                val featureValues = samples.asSequence().map { feature.mapper(it.color) }.distinct().toList()
 
                 val bestSplit = featureValues.asSequence().zipWithNext { value1, value2 -> (value1 + value2) / 2.0 }
-                        .minBy { giniImpurityForFeature(feature, it, sampleColors) }
+                        .minBy { giniImpurityForSplit(feature, it, samples) }
 
                 return bestSplit
             }
 
-            fun buildLeaf(sampleColors: List<LabeledColor>, previousLeaf: TreeLeaf? = null): TreeLeaf? {
-                val (bestFeature, bestSplit) = features.asSequence()
-                        .map { feature ->
-                            feature to splitContinuousVariable(feature, sampleColors)
-                        }.filter { (_, split) ->
-                            split != null
-                        }.minBy { (feature, split) ->
-                            giniImpurityForFeature(feature, split!!, sampleColors)
-                        }?: (null to null)
 
-                return if (previousLeaf == null || (bestFeature != null && giniImpurityForFeature(bestFeature, bestSplit!!, sampleColors) < previousLeaf.giniImpurity))
-                    TreeLeaf(bestFeature!!, bestSplit!!, sampleColors)
+            inner class FeatureAndSplit(val feature: Feature, val split: Double)
+
+            fun buildLeaf(samples: List<LabeledColor>, previousLeaf: TreeLeaf? = null, featureSampleSize: Int? = null ): TreeLeaf? {
+
+                val fs = (if (featureSampleSize == null) features else features.random(featureSampleSize) )
+                        .asSequence()
+                        .filter { splitContinuousVariable(it, samples) != null }
+                        .map { feature ->
+                            FeatureAndSplit(feature, splitContinuousVariable(feature, samples)!!)
+                        }.minBy { fs ->
+                            giniImpurityForSplit(fs.feature, fs.split, samples)
+                        }
+
+                return if (previousLeaf == null ||
+                        (fs != null && giniImpurityForSplit(fs.feature, fs.split, samples) < previousLeaf.giniImpurity))
+                    TreeLeaf(fs!!.feature, fs.split, samples)
                 else
                     null
             }
 
             inner class TreeLeaf(val feature: Feature,
                            val splitValue: Double,
-                           val sampleColors: List<LabeledColor>) {
+                           val samples: List<LabeledColor>) {
 
-                val darkColors = sampleColors.filter { it.fontShade == FontShade.DARK }
-                val lightColors = sampleColors.filter { it.fontShade == FontShade.LIGHT }
+                val goodWeatherItems = samples.filter { it.fontShade == FontShade.DARK }
+                val badWeatherItems = samples.filter { it.fontShade == FontShade.LIGHT }
 
-                val giniImpurity = giniImpurityForFeature(feature, splitValue, sampleColors)
+                val giniImpurity = giniImpurityForSplit(feature, splitValue, samples)
 
-                val darkLeaf: TreeLeaf? = buildLeaf(darkColors, this)
-                val lightLeaf: TreeLeaf? = buildLeaf(lightColors, this)
+                val featurePositiveLeaf: TreeLeaf? = buildLeaf(samples.filter { feature.mapper(it.color) >= splitValue }, this)
+                val featureNegativeLeaf: TreeLeaf? = buildLeaf(samples.filter { feature.mapper(it.color) < splitValue }, this)
 
-                fun predict(color: Color): FontShade {
+                fun predict(color: Color): Double {
 
                     val featureValue = feature.mapper(color)
 
+
                     return when {
                         featureValue >= splitValue -> when {
-                            darkLeaf == null -> (darkColors.count().toDouble() / sampleColors.count().toDouble())
-                                    .let { if (it >= .50) FontShade.DARK else FontShade.LIGHT }
-                            else -> darkLeaf.predict(color)
+                            featurePositiveLeaf == null -> (goodWeatherItems.count { feature.mapper(it.color) >= splitValue }.toDouble() / samples.count { feature.mapper(it.color) >= splitValue }.toDouble())
+                            else -> featurePositiveLeaf.predict(color)
                         }
                         else -> when {
-                            lightLeaf == null -> (darkColors.count().toDouble() / sampleColors.count().toDouble())
-                                    .let { if (it >= .50) FontShade.DARK else FontShade.LIGHT }
-                            else -> lightLeaf.predict(color)
+                            featureNegativeLeaf == null -> (goodWeatherItems.count { feature.mapper(it.color) < splitValue }.toDouble() / samples.count { feature.mapper(it.color) < splitValue }.toDouble())
+                            else -> featureNegativeLeaf.predict(color)
                         }
                     }
                 }
@@ -295,7 +306,7 @@ object PredictorModel {
 
                 val tree = buildLeaf(inputs)
 
-                return tree!!.predict(color)
+                return if (tree!!.predict(color) >= .5) FontShade.DARK else FontShade.LIGHT
             }
         },
 
@@ -305,7 +316,6 @@ object PredictorModel {
             // StatusQuest on YouTube: https://www.youtube.com/watch?v=7VeUPuFGJHk
 
             val featureSampleCount = 2
-
             inner class Feature(val name: String, val mapper: (Color) -> Double)
 
             val features = listOf(
@@ -314,79 +324,80 @@ object PredictorModel {
                     Feature("Blue") { it.blue * 255.0 }
             )
 
+            fun giniImpurity(samples: List<LabeledColor>): Double {
 
-            fun giniImpurityForFeature(feature: Feature,
-                                       splitValue: Double,
-                                       sampleColors: List<LabeledColor>): Double {
+                val totalSampleCount = samples.count().toDouble()
 
-                val darkColorCount = sampleColors.count { feature.mapper(it.color) >= splitValue }.toDouble()
-                val lightColorCount = sampleColors.count { feature.mapper(it.color) < splitValue }.toDouble()
-                val totalColorCount = sampleColors.count().toDouble()
-
-                return 1.0 - (darkColorCount / totalColorCount).pow(2) -
-                        (lightColorCount / totalColorCount).pow(2)
+                return 1.0 - (samples.count { it.fontShade == FontShade.DARK }.toDouble() / totalSampleCount).pow(2) -
+                        (samples.count {  it.fontShade == FontShade.LIGHT }.toDouble() / totalSampleCount).pow(2)
             }
 
-            fun splitContinuousVariable(feature: Feature, sampleColors: List<LabeledColor>): Double? {
+            fun giniImpurityForSplit(feature: Feature, splitValue: Double, samples: List<LabeledColor>): Double {
+                val positiveFeatureSamples = samples.filter { feature.mapper(it.color) >= splitValue }
+                val negativeFeatureSamples = samples.filter { feature.mapper(it.color) < splitValue }
 
-                val featureValues = sampleColors.asSequence().map { feature.mapper(it.color) }.distinct().toList()
+                val positiveImpurity = giniImpurity(positiveFeatureSamples)
+                val negativeImpurity = giniImpurity(negativeFeatureSamples)
+
+                return (positiveImpurity * (positiveFeatureSamples.count().toDouble() / samples.count().toDouble())) +
+                        (negativeImpurity * (negativeFeatureSamples.count().toDouble() / samples.count().toDouble()))
+            }
+
+            fun splitContinuousVariable(feature: Feature, samples: List<LabeledColor>): Double? {
+
+                val featureValues = samples.asSequence().map { feature.mapper(it.color) }.distinct().toList()
 
                 val bestSplit = featureValues.asSequence().zipWithNext { value1, value2 -> (value1 + value2) / 2.0 }
-                        .minBy { giniImpurityForFeature(feature, it, sampleColors) }
+                        .minBy { giniImpurityForSplit(feature, it, samples) }
 
                 return bestSplit
             }
 
-            fun buildLeaf(sampleColors: List<LabeledColor>, featureSampleCount: Int, previousLeaf: TreeLeaf? = null): TreeLeaf? {
 
-                if (sampleColors.isEmpty())
-                    return null
+            inner class FeatureAndSplit(val feature: Feature, val split: Double)
 
-                val (bestFeature, bestSplit) = features.random(featureSampleCount).asSequence()
+            fun buildLeaf(samples: List<LabeledColor>, previousLeaf: TreeLeaf? = null, featureSampleSize: Int? = null ): TreeLeaf? {
+
+                val fs = (if (featureSampleSize == null) features else features.random(featureSampleSize) )
+                        .asSequence()
+                        .filter { splitContinuousVariable(it, samples) != null }
                         .map { feature ->
-                            feature to splitContinuousVariable(feature, sampleColors)
-                        }.filter { (_, split) ->
-                            split != null
-                        }.minBy { (feature, split) ->
-                            giniImpurityForFeature(feature, split!!, sampleColors)
-                        }?: (null to null)
+                            FeatureAndSplit(feature, splitContinuousVariable(feature, samples)!!)
+                        }.minBy { fs ->
+                            giniImpurityForSplit(fs.feature, fs.split, samples)
+                        }
 
-                // Continue recursion if previous leaf is a null (seed), or gini impurity can be improved by going down another leaf
-                return if (previousLeaf == null || (bestFeature != null && giniImpurityForFeature(bestFeature, bestSplit!!, sampleColors) < previousLeaf.giniImpurity))
-                    TreeLeaf(bestFeature!!,
-                            bestSplit!!,
-                            sampleColors)
+                return if (previousLeaf == null ||
+                        (fs != null && giniImpurityForSplit(fs.feature, fs.split, samples) < previousLeaf.giniImpurity))
+                    TreeLeaf(fs!!.feature, fs.split, samples)
                 else
                     null
             }
 
             inner class TreeLeaf(val feature: Feature,
-                           val splitValue: Double,
-                           val sampleColors: List<LabeledColor>) {
+                                 val splitValue: Double,
+                                 val samples: List<LabeledColor>) {
 
-                val darkColors = sampleColors.filter { it.fontShade == FontShade.DARK }
-                val lightColors = sampleColors.filter { it.fontShade == FontShade.LIGHT }
+                val goodWeatherItems = samples.filter { it.fontShade == FontShade.DARK }
+                val badWeatherItems = samples.filter { it.fontShade == FontShade.LIGHT }
 
-                val giniImpurity = giniImpurityForFeature(feature, splitValue, sampleColors)
+                val giniImpurity = giniImpurityForSplit(feature, splitValue, samples)
 
-                val darkLeaf: TreeLeaf? = buildLeaf(darkColors, featureSampleCount, this)
-                val lightLeaf: TreeLeaf? = buildLeaf(lightColors, featureSampleCount, this)
+                val featurePositiveLeaf: TreeLeaf? = buildLeaf(samples.filter { feature.mapper(it.color) >= splitValue }, this)
+                val featureNegativeLeaf: TreeLeaf? = buildLeaf(samples.filter { feature.mapper(it.color) < splitValue }, this)
 
-
-                fun predict(color: Color): FontShade {
+                fun predict(color: Color): Double {
 
                     val featureValue = feature.mapper(color)
 
                     return when {
                         featureValue >= splitValue -> when {
-                            darkLeaf == null -> (darkColors.count().toDouble() / sampleColors.count().toDouble())
-                                    .let { if (it >= .50) FontShade.DARK else FontShade.LIGHT }
-                            else -> darkLeaf.predict(color)
+                            featurePositiveLeaf == null -> (goodWeatherItems.count { feature.mapper(it.color) >= splitValue }.toDouble() / samples.count { feature.mapper(it.color) >= splitValue }.toDouble())
+                            else -> featurePositiveLeaf.predict(color)
                         }
                         else -> when {
-                            lightLeaf == null -> (darkColors.count().toDouble() / sampleColors.count().toDouble())
-                                    .let { if (it >= .50) FontShade.DARK else FontShade.LIGHT }
-                            else -> lightLeaf.predict(color)
+                            featureNegativeLeaf == null -> (goodWeatherItems.count { feature.mapper(it.color) < splitValue }.toDouble() / samples.count { feature.mapper(it.color) < splitValue }.toDouble())
+                            else -> featureNegativeLeaf.predict(color)
                         }
                     }
                 }
@@ -400,15 +411,17 @@ object PredictorModel {
                 val bootStrapSampleCount = (inputs.count() * (2.0 / 3.0)).toInt()
 
                 if (retrainFlag) {
-                    randomForest = (1..1000).asSequence()
+                    randomForest = (1..300).asSequence()
                             .map {
-                                buildLeaf(inputs.random(bootStrapSampleCount), 3)!!
+                                buildLeaf(samples = inputs.random(bootStrapSampleCount), featureSampleSize = 3)!!
                             }.toList()
 
                     retrainFlag = false
                 }
 
-                val votes = randomForest.asSequence().countBy { it.predict(color) }
+                val votes = randomForest.asSequence().countBy {
+                    if (it.predict(color) >= .5) FontShade.DARK else FontShade.LIGHT
+                }
                 println(votes)
                 return votes.maxBy { it.value }!!.key
             }
