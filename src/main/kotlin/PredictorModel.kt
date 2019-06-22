@@ -243,7 +243,7 @@ object PredictorModel {
 
             fun splitContinuousVariable(feature: Feature, samples: List<LabeledColor>): Double? {
 
-                val featureValues = samples.asSequence().map { feature.mapper(it.color) }.distinct().toList()
+                val featureValues = samples.asSequence().map { feature.mapper(it.color) }.distinct().toList().sorted()
 
                 val bestSplit = featureValues.asSequence().zipWithNext { value1, value2 -> (value1 + value2) / 2.0 }
                         .minBy { giniImpurityForSplit(feature, it, samples) }
@@ -345,7 +345,7 @@ object PredictorModel {
 
             fun splitContinuousVariable(feature: Feature, samples: List<LabeledColor>): Double? {
 
-                val featureValues = samples.asSequence().map { feature.mapper(it.color) }.distinct().toList()
+                val featureValues = samples.asSequence().map { feature.mapper(it.color) }.distinct().toList().sorted()
 
                 val bestSplit = featureValues.asSequence().zipWithNext { value1, value2 -> (value1 + value2) / 2.0 }
                         .minBy { giniImpurityForSplit(feature, it, samples) }
